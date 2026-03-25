@@ -1,8 +1,8 @@
 import { exportAll } from '$lib/server/db';
 import type { RequestHandler } from './$types';
 
-export const GET: RequestHandler = () => {
-	const rows = exportAll();
+export const GET: RequestHandler = async () => {
+	const rows = await exportAll();
 	if (!rows.length) {
 		return new Response('', {
 			headers: { 'Content-Type': 'text/csv', 'Content-Disposition': 'attachment; filename="lexpress_saved.csv"' }

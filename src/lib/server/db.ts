@@ -1,35 +1,33 @@
-import Database from 'better-sqlite3';
-import { join } from 'path';
+import postgres from 'postgres';
+import { env } from '$env/dynamic/private';
 
-const DB_PATH = join(process.cwd(), 'listings.db');
-
-function getDb() {
-	const db = new Database(DB_PATH);
-	db.pragma('journal_mode = WAL');
-	return db;
+function getClient() {
+	return postgres(env.DATABASE_URL!, { ssl: 'require', max: 5 });
 }
 
-// Initialise table on first import
-const _db = getDb();
-_db.exec(`
-	CREATE TABLE IF NOT EXISTS saved_listings (
-		id            INTEGER PRIMARY KEY AUTOINCREMENT,
-		title         TEXT,
-		price         TEXT,
-		location      TEXT,
-		bedrooms      TEXT,
-		size          TEXT,
-		features      TEXT,
-		url           TEXT UNIQUE,
-		image         TEXT,
-		payment       TEXT,
-		property_type TEXT,
-		agency        TEXT,
-		notes         TEXT DEFAULT '',
-		saved_at      TEXT DEFAULT (datetime('now'))
-	)
-`);
-_db.close();
+// Run once to create the table
+export async function initDb() {
+	const sql = getClient();
+	await sql`
+		CREATE TABLE IF NOT EXISTS saved_listings (
+			id            SERIAL PRIMARY KEY,
+			title         TEXT,
+			price         TEXT,
+			location      TEXT,
+			bedrooms      TEXT,
+			size          TEXT,
+			features      TEXT,
+			url           TEXT UNIQUE,
+			image         TEXT,
+			payment       TEXT,
+			property_type TEXT,
+			agency        TEXT,
+			notes         TEXT DEFAULT '',
+			saved_at      TIMESTAMPTZ DEFAULT NOW()
+		)
+	`;
+	await sql.end();
+}
 
 export interface SavedListing {
 	id: number;
@@ -52,85 +50,85 @@ function parseRow(row: Record<string, unknown>): SavedListing {
 	return {
 		...row,
 		features: (() => {
-			try {
-				return JSON.parse(row.features as string);
-			} catch {
-				return [];
-			}
+			try { return JSON.parse(row.features as string); } catch { return []; }
 		})()
 	} as SavedListing;
 }
 
-export function saveListing(data: Record<string, unknown>): { ok: boolean; id?: number; error?: string } {
-	const db = getDb();
+export async function saveListing(
+	data: Record<string, unknown>
+): Promise<{ ok: boolean; id?: number; error?: string }> {
+	const sql = getClient();
 	try {
-		const result = db
-			.prepare(`
+		const rows = await sql`
 			INSERT INTO saved_listings
 				(title, price, location, bedrooms, size, features, url, image, payment, property_type, agency, notes)
-			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-		`)
-			.run(
-				data.title ?? '',
-				data.price ?? '',
-				data.location ?? '',
-				data.bedrooms ?? '',
-				data.size ?? '',
-				JSON.stringify(data.features ?? []),
-				data.url ?? '',
-				data.image ?? '',
-				data.payment ?? '',
-				data.property_type ?? '',
-				data.agency ?? '',
-				data.notes ?? ''
-			);
-		return { ok: true, id: result.lastInsertRowid as number };
+			VALUES (
+				${String(data.title ?? '')},
+				${String(data.price ?? '')},
+				${String(data.location ?? '')},
+				${String(data.bedrooms ?? '')},
+				${String(data.size ?? '')},
+				${JSON.stringify(data.features ?? [])},
+				${String(data.url ?? '')},
+				${String(data.image ?? '')},
+				${String(data.payment ?? '')},
+				${String(data.property_type ?? '')},
+				${String(data.agency ?? '')},
+				${String(data.notes ?? '')}
+			)
+			RETURNING id
+		`;
+		return { ok: true, id: rows[0].id as number };
 	} catch (e: unknown) {
 		const msg = e instanceof Error ? e.message : String(e);
-		return { ok: false, error: msg.includes('UNIQUE') ? 'Already saved' : msg };
+		return { ok: false, error: msg.includes('unique') || msg.includes('duplicate') ? 'Already saved' : msg };
 	} finally {
-		db.close();
+		await sql.end();
 	}
 }
 
-export function getSaved(search = '', propertyType = '', payment = ''): SavedListing[] {
-	const db = getDb();
-	let query = 'SELECT * FROM saved_listings WHERE 1=1';
-	const params: unknown[] = [];
-
-	if (search) {
-		query += ' AND (title LIKE ? OR location LIKE ?)';
-		params.push(`%${search}%`, `%${search}%`);
+export async function getSaved(
+	search = '',
+	propertyType = '',
+	payment = ''
+): Promise<SavedListing[]> {
+	const sql = getClient();
+	try {
+		const rows = await sql`
+			SELECT * FROM saved_listings
+			WHERE 1=1
+			${search ? sql`AND (title ILIKE ${'%' + search + '%'} OR location ILIKE ${'%' + search + '%'})` : sql``}
+			${propertyType ? sql`AND property_type = ${propertyType}` : sql``}
+			${payment ? sql`AND payment = ${payment}` : sql``}
+			ORDER BY saved_at DESC
+		`;
+		return rows.map(r => parseRow(r as Record<string, unknown>));
+	} finally {
+		await sql.end();
 	}
-	if (propertyType) {
-		query += ' AND property_type = ?';
-		params.push(propertyType);
-	}
-	if (payment) {
-		query += ' AND payment = ?';
-		params.push(payment);
-	}
-	query += ' ORDER BY saved_at DESC';
-
-	const rows = db.prepare(query).all(...params) as Record<string, unknown>[];
-	db.close();
-	return rows.map(parseRow);
 }
 
-export function deleteListing(id: number): boolean {
-	const db = getDb();
-	const result = db.prepare('DELETE FROM saved_listings WHERE id = ?').run(id);
-	db.close();
-	return result.changes > 0;
+export async function deleteListing(id: number): Promise<boolean> {
+	const sql = getClient();
+	try {
+		const result = await sql`DELETE FROM saved_listings WHERE id = ${id}`;
+		return result.count > 0;
+	} finally {
+		await sql.end();
+	}
 }
 
-export function updateNotes(id: number, notes: string): boolean {
-	const db = getDb();
-	const result = db.prepare('UPDATE saved_listings SET notes = ? WHERE id = ?').run(notes, id);
-	db.close();
-	return result.changes > 0;
+export async function updateNotes(id: number, notes: string): Promise<boolean> {
+	const sql = getClient();
+	try {
+		const result = await sql`UPDATE saved_listings SET notes = ${notes} WHERE id = ${id}`;
+		return result.count > 0;
+	} finally {
+		await sql.end();
+	}
 }
 
-export function exportAll(): SavedListing[] {
+export async function exportAll(): Promise<SavedListing[]> {
 	return getSaved();
 }
