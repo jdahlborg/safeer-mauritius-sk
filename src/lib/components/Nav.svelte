@@ -9,6 +9,7 @@
 		{ href: '/#packages', label: 'Packages' },
 		{ href: '/#about', label: 'About' },
 		{ href: '/#faq', label: 'FAQ' },
+		{ href: '/admin', label: 'Dashboard' },
 	];
 </script>
 

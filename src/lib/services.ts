@@ -53,7 +53,7 @@ export const services: Service[] = [
 		slug: 'logistics',
 		title: 'Logistics & Moving',
 		tagline: 'Seamless international removals to your island life',
-		description: 'International removals, customs clearance, vehicle imports, and even pet relocation — we coordinate with trusted partners to move your life to Mauritius without the headaches.',
+		description: 'International removals, customs clearance, vehicle imports, and even pet relocation - we coordinate with trusted partners to move your life to Mauritius without the headaches.',
 		color: '#e76f51',
 		items: [
 			'International removals coordination',
@@ -65,7 +65,7 @@ export const services: Service[] = [
 			'Packing & unpacking services',
 		],
 		faqs: [
-			{ q: 'What are Mauritius customs rules?', a: 'Household effects imported within 6 months of arriving as a new resident are duty-exempt. Vehicles attract import duty and excise tax — we advise on cost optimisation strategies.' },
+			{ q: 'What are Mauritius customs rules?', a: 'Household effects imported within 6 months of arriving as a new resident are duty-exempt. Vehicles attract import duty and excise tax - we advise on cost optimisation strategies.' },
 			{ q: 'Can I bring my pet?', a: 'Yes, but Mauritius has strict quarantine rules. We work with specialist pet relocation agents and veterinary services to prepare all health certificates and minimise quarantine time.' },
 		]
 	},
@@ -93,7 +93,7 @@ export const services: Service[] = [
 		slug: 'family-lifestyle',
 		title: 'Family & Lifestyle',
 		tagline: 'Help every family member feel at home',
-		description: 'We ensure your whole family transitions smoothly — from school enrolment to healthcare orientation, social introductions, and community integration.',
+		description: 'We ensure your whole family transitions smoothly - from school enrolment to healthcare orientation, social introductions, and community integration.',
 		color: '#00b4d8',
 		items: [
 			'International school research & tours',
@@ -113,7 +113,7 @@ export const services: Service[] = [
 		slug: 'remote-worker',
 		title: 'Remote Worker Package',
 		tagline: 'Live in paradise, work from anywhere',
-		description: 'The complete turnkey solution for digital nomads and remote professionals ready to base themselves in Mauritius. Visa, housing, connectivity, and community — all sorted.',
+		description: 'The complete turnkey solution for digital nomads and remote professionals ready to base themselves in Mauritius. Visa, housing, connectivity, and community - all sorted.',
 		color: '#0077b6',
 		items: [
 			'Premium Visa application end-to-end',
