@@ -1,9 +1,11 @@
 import { lexpressSource } from './lexpress';
 import { propertyMuSource } from './propertymu';
+import { allysSource } from './allysmu';
 import type { ScraperSource } from './types';
 
 export const SOURCES: ScraperSource[] = [
 	lexpressSource,
+	allysSource,
 	propertyMuSource
 ];
 
