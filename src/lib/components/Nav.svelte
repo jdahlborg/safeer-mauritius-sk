@@ -22,7 +22,7 @@
 					<span class="text-white font-bold text-lg" style="font-family:'Playfair Display',serif">S</span>
 				</div>
 				<div>
-					<span class="font-bold text-xl text-[#005f8a]" style="font-family:'Playfair Display',serif">Safeer</span>
+					<span class="font-bold text-xl text-[#005f8a]" style="font-family:'Playfair Display',serif">Live</span>
 					<span class="font-bold text-xl text-[#c9a96e]" style="font-family:'Playfair Display',serif"> Mauritius</span>
 				</div>
 			</a>

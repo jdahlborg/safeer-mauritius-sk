@@ -61,7 +61,7 @@
 </script>
 
 <svelte:head>
-	<title>Safeer Mauritius — Relocation Consulting</title>
+	<title>Live Mauritius — Relocation Consulting</title>
 	<meta name="description" content="Expert relocation consulting for Mauritius. Visas, housing, legal setup, and lifestyle integration — we handle the complexity so you don't have to." />
 </svelte:head>
 
@@ -451,9 +451,9 @@
 		</div>
 		<div class="grid grid-cols-1 md:grid-cols-3 gap-8">
 			{#each [
-				{ initials: 'JB', name: 'James & Sarah B.', from: 'London → Grand Baie, 2024', quote: "Moving our family of four from London to Mauritius seemed overwhelming. Safeer handled everything — from our permits to finding the perfect villa in Tamarin. We arrived to a fully set-up home. Absolutely seamless." },
-				{ initials: 'MK', name: 'Martin K.', from: 'Amsterdam → Flic en Flac, 2025', quote: "As a remote consultant, I needed the Premium Visa fast. Safeer had my application ready in days and walked me through every step. I was living in Flic en Flac within 6 weeks of my first call. Incredible team." },
-				{ initials: 'PD', name: 'Patricia D.', from: 'Cape Town → Bel Ombre, 2024', quote: "Retiring to Mauritius was my dream, but the paperwork felt impossible. Safeer turned a complex process into a clear, manageable journey. They even helped me find a wonderful community of expats. I wish I'd done this years ago." },
+				{ initials: 'JB', name: 'James & Sarah B.', from: 'London → Grand Baie, 2024', quote: "Moving our family of four from London to Mauritius seemed overwhelming. Live Mauritius handled everything — from our permits to finding the perfect villa in Tamarin. We arrived to a fully set-up home. Absolutely seamless." },
+				{ initials: 'MK', name: 'Martin K.', from: 'Amsterdam → Flic en Flac, 2025', quote: "As a remote consultant, I needed the Premium Visa fast. Live Mauritius had my application ready in days and walked me through every step. I was living in Flic en Flac within 6 weeks of my first call. Incredible team." },
+				{ initials: 'PD', name: 'Patricia D.', from: 'Cape Town → Bel Ombre, 2024', quote: "Retiring to Mauritius was my dream, but the paperwork felt impossible. Live Mauritius turned a complex process into a clear, manageable journey. They even helped me find a wonderful community of expats. I wish I'd done this years ago." },
 			] as t}
 				<div class="testimonial-card">
 					<div class="flex text-[#c9a96e] mb-4">★★★★★</div>
@@ -492,7 +492,7 @@
 				<span class="section-tag">Who We Are</span>
 				<h2 class="section-title mt-3">Local Experts,<br/>Global Experience</h2>
 				<p class="text-gray-600 leading-relaxed mt-6">
-					Safeer Mauritius was founded by a team of relocation specialists, lawyers, and local advisors who believe that moving to a new country should be an exciting adventure — not a bureaucratic nightmare.
+					Live Mauritius was founded by a team of relocation specialists, lawyers, and local advisors who believe that moving to a new country should be an exciting adventure — not a bureaucratic nightmare.
 				</p>
 				<p class="text-gray-600 leading-relaxed mt-4">
 					Based in Port Louis, we combine deep local knowledge with international expertise to serve clients from Europe, the Middle East, Africa, and beyond.
@@ -578,7 +578,7 @@
 						</div>
 						<div>
 							<div class="font-semibold text-gray-900">Email</div>
-							<div class="text-gray-600 text-sm">hello@safeermauritius.com</div>
+							<div class="text-gray-600 text-sm">hello@livemauritius.com</div>
 						</div>
 					</div>
 					<div class="flex items-start gap-4">

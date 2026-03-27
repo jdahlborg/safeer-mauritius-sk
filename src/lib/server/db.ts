@@ -22,9 +22,14 @@ export async function initDb() {
 			payment       TEXT,
 			property_type TEXT,
 			agency        TEXT,
+			source        TEXT DEFAULT 'lexpress',
 			notes         TEXT DEFAULT '',
 			saved_at      TIMESTAMPTZ DEFAULT NOW()
 		)
+	`;
+	// Add source column to existing tables that predate this schema
+	await sql`
+		ALTER TABLE saved_listings ADD COLUMN IF NOT EXISTS source TEXT DEFAULT 'lexpress'
 	`;
 	await sql.end();
 }
@@ -42,6 +47,7 @@ export interface SavedListing {
 	payment: string;
 	property_type: string;
 	agency: string;
+	source: string;
 	notes: string;
 	saved_at: string;
 }
@@ -62,7 +68,7 @@ export async function saveListing(
 	try {
 		const rows = await sql`
 			INSERT INTO saved_listings
-				(title, price, location, bedrooms, size, features, url, image, payment, property_type, agency, notes)
+				(title, price, location, bedrooms, size, features, url, image, payment, property_type, agency, source, notes)
 			VALUES (
 				${String(data.title ?? '')},
 				${String(data.price ?? '')},
@@ -75,6 +81,7 @@ export async function saveListing(
 				${String(data.payment ?? '')},
 				${String(data.property_type ?? '')},
 				${String(data.agency ?? '')},
+				${String(data.source ?? 'lexpress')},
 				${String(data.notes ?? '')}
 			)
 			RETURNING id

@@ -7,7 +7,13 @@
 		image: string; agency: string; payment: string; property_type: string;
 	};
 
+	const SOURCES = [
+		{ id: 'lexpress', name: "L'Express Property", payments: ['buy', 'rent', 'holiday'], propertyTypes: ['apartment', 'villa', 'house', 'land', 'office', 'penthouse'], sortable: true },
+		{ id: 'propertymu', name: 'Property.mu', payments: ['buy', 'rent'], propertyTypes: ['any'], sortable: false }
+	];
+
 	// ── Scraper state ──────────────────────────────────────
+	let source = $state('lexpress');
 	let payment = $state('buy');
 	let propertyType = $state('apartment');
 	let sortBy = $state('most_recent');
@@ -15,6 +21,8 @@
 	let scraping = $state(false);
 	let scrapeResults = $state<Listing[]>([]);
 	let scrapeError = $state('');
+
+	let currentSource = $derived(SOURCES.find(s => s.id === source) ?? SOURCES[0]);
 
 	// ── Saved state ────────────────────────────────────────
 	let savedListings = $state<SavedListing[]>([]);
@@ -33,7 +41,7 @@
 	// ── Scrape ────────────────────────────────────────────
 	async function scrape() {
 		scraping = true; scrapeResults = []; scrapeError = '';
-		const params = new URLSearchParams({ payment, property_type: propertyType, sort_by: sortBy, pages: String(pages) });
+		const params = new URLSearchParams({ source, payment, property_type: propertyType, sort_by: sortBy, pages: String(pages) });
 		const r = await fetch(`/api/scrape?${params}`);
 		const d = await r.json();
 		scrapeResults = d.listings;
@@ -46,7 +54,7 @@
 		const r = await fetch('/api/listings', {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify(listing)
+			body: JSON.stringify({ ...listing, source })
 		});
 		const d = await r.json();
 		if (d.ok) {
@@ -85,7 +93,7 @@
 </script>
 
 <svelte:head>
-	<title>Property Dashboard — Safeer Mauritius</title>
+	<title>Property Dashboard — Live Mauritius</title>
 </svelte:head>
 
 <div class="min-h-screen bg-gray-50 pt-24 pb-16">
@@ -95,7 +103,7 @@
 		<div class="mb-8 flex items-center justify-between">
 			<div>
 				<h1 class="text-3xl font-bold text-gray-900" style="font-family:'Playfair Display',serif">Property Dashboard</h1>
-				<p class="text-gray-500 text-sm mt-1">Scrape L'Express Property and manage saved listings</p>
+				<p class="text-gray-500 text-sm mt-1">Scrape Mauritius property portals and manage saved listings</p>
 			</div>
 			<div class="flex gap-3">
 				<a href="/api/export/json" class="btn-outline text-sm px-4 py-2">Export JSON</a>
@@ -127,39 +135,48 @@
 		{#if activeTab === 'search'}
 			<!-- Filter bar -->
 			<div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-6">
-				<div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-4">
+				<div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+					<div>
+						<label class="form-label">Source</label>
+						<select bind:value={source} class="form-input text-sm py-2">
+							{#each SOURCES as s}
+								<option value={s.id}>{s.name}</option>
+							{/each}
+						</select>
+					</div>
 					<div>
 						<label class="form-label">Transaction</label>
 						<select bind:value={payment} class="form-input text-sm py-2">
-							<option value="buy">For Sale</option>
-							<option value="rent">For Rent</option>
-							<option value="holiday">Holiday</option>
+							{#each currentSource.payments as p}
+								<option value={p}>{p === 'buy' ? 'For Sale' : p === 'rent' ? 'For Rent' : 'Holiday'}</option>
+							{/each}
 						</select>
 					</div>
-					<div>
-						<label class="form-label">Property Type</label>
-						<select bind:value={propertyType} class="form-input text-sm py-2">
-							<option value="apartment">Apartment</option>
-							<option value="villa">Villa</option>
-							<option value="house">House</option>
-							<option value="land">Land</option>
-							<option value="office">Office</option>
-							<option value="penthouse">Penthouse</option>
-						</select>
-					</div>
-					<div>
-						<label class="form-label">Sort By</label>
-						<select bind:value={sortBy} class="form-input text-sm py-2">
-							<option value="most_recent">Most Recent</option>
-							<option value="least_expensive">Cheapest</option>
-							<option value="most_expensive">Most Expensive</option>
-						</select>
-					</div>
+					{#if currentSource.propertyTypes[0] !== 'any'}
+						<div>
+							<label class="form-label">Property Type</label>
+							<select bind:value={propertyType} class="form-input text-sm py-2">
+								{#each currentSource.propertyTypes as t}
+									<option value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</option>
+								{/each}
+							</select>
+						</div>
+					{/if}
+					{#if currentSource.sortable}
+						<div>
+							<label class="form-label">Sort By</label>
+							<select bind:value={sortBy} class="form-input text-sm py-2">
+								<option value="most_recent">Most Recent</option>
+								<option value="least_expensive">Cheapest</option>
+								<option value="most_expensive">Most Expensive</option>
+							</select>
+						</div>
+					{/if}
 					<div>
 						<label class="form-label">Pages</label>
 						<input type="number" bind:value={pages} min="1" max="5" class="form-input text-sm py-2" />
 					</div>
-					<div class="col-span-2 flex items-end">
+					<div class="flex items-end">
 						<button onclick={scrape} disabled={scraping} class="btn-primary w-full py-2 text-sm disabled:opacity-60">
 							{scraping ? 'Scraping...' : 'Scrape Listings'}
 						</button>
@@ -174,7 +191,7 @@
 			{#if scraping}
 				<div class="text-center py-20 text-gray-400">
 					<div class="animate-spin w-8 h-8 border-2 border-[#0077b6] border-t-transparent rounded-full mx-auto mb-4"></div>
-					Fetching listings from L'Express Property...
+					Fetching listings from {currentSource.name}...
 				</div>
 			{:else if scrapeResults.length === 0 && !scrapeError}
 				<div class="text-center py-20 text-gray-400">
@@ -260,7 +277,10 @@
 										{/each}
 									</div>
 								{/if}
-								<p class="font-bold text-[#0077b6] mb-3">{listing.price}</p>
+								<p class="font-bold text-[#0077b6] mb-2">{listing.price}</p>
+								{#if listing.source && listing.source !== "lexpress"}
+									<span class="text-xs text-gray-400 mb-2 block">{SOURCES.find(s => s.id === listing.source)?.name ?? listing.source}</span>
+								{/if}
 								<textarea
 									class="form-input text-xs resize-none mb-2 py-2"
 									rows="2"

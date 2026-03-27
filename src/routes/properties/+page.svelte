@@ -23,7 +23,7 @@
 </script>
 
 <svelte:head>
-	<title>Properties in Mauritius — Safeer Mauritius</title>
+	<title>Properties in Mauritius — Live Mauritius</title>
 	<meta name="description" content="Browse properties for sale and rent in Mauritius. Curated listings from trusted local agents." />
 </svelte:head>
 
