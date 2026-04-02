@@ -4,12 +4,10 @@
 	let mobileOpen = $state(false);
 
 	const links = [
-		{ href: '/#services', label: 'Services' },
 		{ href: '/properties', label: 'Properties' },
-		{ href: '/#packages', label: 'Packages' },
-		{ href: '/#about', label: 'About' },
+		{ href: '/#services', label: 'Services' },
+		{ href: '/#why-mauritius', label: 'Why Mauritius' },
 		{ href: '/#faq', label: 'FAQ' },
-		{ href: '/admin', label: 'Dashboard' },
 	];
 </script>
 
@@ -32,7 +30,7 @@
 				{#each links as link}
 					<a href={link.href} class="nav-link">{link.label}</a>
 				{/each}
-				<a href="/#contact" class="btn-primary text-sm px-5 py-2.5">Get in Touch</a>
+				<a href="/properties" class="btn-primary text-sm px-5 py-2.5">Browse Properties</a>
 			</nav>
 
 			<!-- Hamburger -->

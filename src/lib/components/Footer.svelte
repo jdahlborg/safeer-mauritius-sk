@@ -31,9 +31,9 @@
 				<h4 class="font-semibold text-white mb-4">Quick Links</h4>
 				<ul class="space-y-2">
 					<li><a href="/" class="footer-link">Home</a></li>
+					<li><a href="/properties" class="footer-link">Properties</a></li>
 					<li><a href="/#services" class="footer-link">Services</a></li>
-					<li><a href="/#packages" class="footer-link">Packages</a></li>
-					<li><a href="/#about" class="footer-link">About Us</a></li>
+					<li><a href="/#why-mauritius" class="footer-link">Why Mauritius</a></li>
 					<li><a href="/#faq" class="footer-link">FAQ</a></li>
 					<li><a href="/#contact" class="footer-link">Contact</a></li>
 				</ul>
