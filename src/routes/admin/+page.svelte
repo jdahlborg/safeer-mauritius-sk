@@ -24,7 +24,12 @@
 	let scrapeResults = $state<Listing[]>([]);
 	let scrapeError = $state('');
 
+	// Track save state per listing URL: 'idle' | 'saving' | 'saved' | 'duplicate'
+	let saveState = $state<Record<string, 'saving' | 'saved' | 'duplicate'>>({});
+	let savingAll = $state(false);
+
 	let currentSource = $derived(SOURCES.find(s => s.id === source) ?? SOURCES[0]);
+	let savedCount = $derived(Object.values(saveState).filter(s => s === 'saved' || s === 'duplicate').length);
 
 	// ── Saved state ────────────────────────────────────────
 	let savedListings = $state<SavedListing[]>([]);
@@ -42,7 +47,7 @@
 
 	// ── Scrape ────────────────────────────────────────────
 	async function scrape() {
-		scraping = true; scrapeResults = []; scrapeError = '';
+		scraping = true; scrapeResults = []; scrapeError = ''; saveState = {};
 		const params = new URLSearchParams({ source, payment, property_type: propertyType, sort_by: sortBy, pages: String(pages) });
 		const r = await fetch(`/api/scrape?${params}`);
 		const d = await r.json();
@@ -52,7 +57,8 @@
 	}
 
 	// ── Save listing ──────────────────────────────────────
-	async function save(listing: Listing) {
+	async function save(listing: Listing): Promise<boolean> {
+		saveState = { ...saveState, [listing.url]: 'saving' };
 		const r = await fetch('/api/listings', {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
@@ -60,11 +66,32 @@
 		});
 		const d = await r.json();
 		if (d.ok) {
-			showToast('Saved!');
+			saveState = { ...saveState, [listing.url]: 'saved' };
 			loadSaved();
+			return true;
 		} else {
-			showToast(d.error ?? 'Error saving');
+			const isDupe = (d.error ?? '').toLowerCase().includes('already');
+			saveState = { ...saveState, [listing.url]: isDupe ? 'duplicate' : 'saving' };
+			if (!isDupe) {
+				saveState = { ...saveState };
+				delete saveState[listing.url];
+			}
+			return false;
 		}
+	}
+
+	// ── Save all ──────────────────────────────────────────
+	async function saveAll() {
+		savingAll = true;
+		const unsaved = scrapeResults.filter(l => !saveState[l.url]);
+		let count = 0;
+		for (const listing of unsaved) {
+			const ok = await save(listing);
+			if (ok) count++;
+			await new Promise(r => setTimeout(r, 150)); // small delay to avoid hammering
+		}
+		savingAll = false;
+		showToast(`${count} listing${count !== 1 ? 's' : ''} saved`);
 	}
 
 	// ── Delete listing ────────────────────────────────────
@@ -85,7 +112,7 @@
 
 	function showToast(msg: string) {
 		toast = msg;
-		setTimeout(() => (toast = ''), 2500);
+		setTimeout(() => (toast = ''), 3000);
 	}
 
 	// Load saved on initial render
@@ -201,10 +228,31 @@
 					<p class="text-sm mt-1">Set your filters and click Scrape Listings</p>
 				</div>
 			{:else}
-				<p class="text-sm text-gray-500 mb-4">{scrapeResults.length} listing{scrapeResults.length !== 1 ? 's' : ''} found</p>
+				<div class="flex items-center justify-between mb-4">
+					<p class="text-sm text-gray-500">
+						{scrapeResults.length} listing{scrapeResults.length !== 1 ? 's' : ''} found
+						{#if savedCount > 0}
+							<span class="ml-2 text-[#2d6a4f] font-medium">· {savedCount} saved</span>
+						{/if}
+					</p>
+					<button
+						onclick={saveAll}
+						disabled={savingAll || scrapeResults.every(l => saveState[l.url])}
+						class="text-sm px-4 py-2 rounded-lg bg-[#2d6a4f] text-white font-medium hover:bg-[#245a40] disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+					>
+						{#if savingAll}
+							<span class="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+							Saving…
+						{:else}
+							Save All
+						{/if}
+					</button>
+				</div>
 				<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
 					{#each scrapeResults as listing}
-						<div class="bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100 flex flex-col">
+						{@const state = saveState[listing.url]}
+						<div class="bg-white rounded-2xl overflow-hidden shadow-sm border transition-all duration-200 flex flex-col
+							{state === 'saved' ? 'border-[#2d6a4f] ring-1 ring-[#2d6a4f]/30' : state === 'duplicate' ? 'border-gray-300 opacity-70' : 'border-gray-100'}">
 							<div class="relative h-44 bg-gray-100">
 								{#if listing.image}
 									<img src={listing.image} alt={listing.title} class="w-full h-full object-cover" loading="lazy" />
@@ -214,6 +262,11 @@
 								<span class="absolute top-2 left-2 text-xs font-semibold px-2 py-1 rounded-full {listing.payment === 'rent' ? 'bg-[#2d6a4f] text-white' : 'bg-[#0077b6] text-white'}">
 									{listing.payment === 'rent' ? 'Rent' : 'Sale'}
 								</span>
+								{#if state === 'saved'}
+									<span class="absolute top-2 right-2 w-7 h-7 bg-[#2d6a4f] text-white rounded-full flex items-center justify-center text-sm shadow">✓</span>
+								{:else if state === 'duplicate'}
+									<span class="absolute top-2 right-2 text-xs bg-gray-600 text-white px-2 py-0.5 rounded-full">Saved</span>
+								{/if}
 							</div>
 							<div class="p-4 flex flex-col flex-1">
 								<h3 class="font-semibold text-gray-900 text-sm leading-snug mb-1 line-clamp-2">{listing.title}</h3>
@@ -228,7 +281,22 @@
 								<p class="font-bold text-[#0077b6] mt-auto mb-3">{listing.price}</p>
 								<div class="flex gap-2">
 									<a href={listing.url} target="_blank" rel="noopener noreferrer" class="flex-1 text-center text-xs py-2 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors">View</a>
-									<button onclick={() => save(listing)} class="flex-1 text-xs py-2 rounded-lg bg-[#0077b6] text-white hover:bg-[#005f8a] transition-colors">Save</button>
+									<button
+										onclick={() => save(listing)}
+										disabled={!!state}
+										class="flex-1 text-xs py-2 rounded-lg transition-colors flex items-center justify-center gap-1 disabled:cursor-not-allowed
+											{state === 'saved' ? 'bg-[#2d6a4f] text-white' : state === 'duplicate' ? 'bg-gray-200 text-gray-500' : state === 'saving' ? 'bg-[#0077b6]/60 text-white' : 'bg-[#0077b6] text-white hover:bg-[#005f8a]'}"
+									>
+										{#if state === 'saving'}
+											<span class="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+										{:else if state === 'saved'}
+											✓ Saved
+										{:else if state === 'duplicate'}
+											Already saved
+										{:else}
+											Save
+										{/if}
+									</button>
 								</div>
 							</div>
 						</div>
