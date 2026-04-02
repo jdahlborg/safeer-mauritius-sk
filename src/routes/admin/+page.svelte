@@ -94,7 +94,7 @@
 </script>
 
 <svelte:head>
-	<title>Property Dashboard — Safeer Properties Mauritius</title>
+	<title>Property Dashboard — Safeer Properties</title>
 </svelte:head>
 
 <div class="min-h-screen bg-gray-50 pt-24 pb-16">

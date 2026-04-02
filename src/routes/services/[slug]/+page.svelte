@@ -8,7 +8,7 @@
 </script>
 
 <svelte:head>
-	<title>{s.title} — Safeer Properties Mauritius</title>
+	<title>{s.title} — Safeer Properties</title>
 	<meta name="description" content={s.tagline} />
 </svelte:head>
 
@@ -83,7 +83,7 @@
 
 					<div class="mt-8 pt-6 border-t border-white/20 space-y-3 text-sm text-white/70">
 						<p>📍 Port Louis, Mauritius</p>
-						<p>📧 hello@safeerproperties.mu</p>
+						<p>📧 hello@safeer.mu</p>
 						<p>📞 +230 5700 0000</p>
 					</div>
 				</div>
