@@ -41,13 +41,12 @@
 
 <!-- Filters -->
 <section class="bg-white border-b border-gray-100 sticky top-20 z-30">
-	<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-wrap items-center gap-4">
-		<!-- Tabs -->
-		<div class="flex rounded-lg border border-gray-200 overflow-hidden">
+	<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex flex-wrap items-center gap-2">
+		<div class="flex rounded-lg border border-gray-200 overflow-hidden text-sm">
 			{#each [['all','All'], ['buy','For Sale'], ['rent','For Rent']] as [val, label]}
 				<button
 					onclick={() => (tab = val as typeof tab)}
-					class="px-4 py-2 text-sm font-medium transition-colors"
+					class="px-3 py-1.5 font-medium transition-colors"
 					class:bg-[#0077b6]={tab === val}
 					class:text-white={tab === val}
 					class:text-gray-600={tab !== val}
@@ -56,17 +55,17 @@
 			{/each}
 		</div>
 
-		<select bind:value={filterType} class="form-input w-auto text-sm py-2">
+		<select bind:value={filterType} class="text-sm border border-gray-200 rounded-lg px-2.5 py-1.5 bg-white text-gray-700 focus:outline-none focus:ring-1 focus:ring-[#0077b6]">
 			<option value="">All Types</option>
 			{#each types as t}<option value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</option>{/each}
 		</select>
 
-		<select bind:value={filterArea} class="form-input w-auto text-sm py-2">
+		<select bind:value={filterArea} class="text-sm border border-gray-200 rounded-lg px-2.5 py-1.5 bg-white text-gray-700 focus:outline-none focus:ring-1 focus:ring-[#0077b6]">
 			<option value="">All Areas</option>
 			{#each areas as a}<option value={a}>{a}</option>{/each}
 		</select>
 
-		<span class="text-gray-400 text-sm ml-auto">{filtered.length} listings</span>
+		<span class="text-gray-400 text-xs ml-auto">{filtered.length} listings</span>
 	</div>
 </section>
 
