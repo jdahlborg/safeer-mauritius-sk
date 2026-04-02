@@ -8,7 +8,7 @@
 					<div class="w-10 h-10 rounded-full bg-gradient-to-br from-[#0077b6] to-[#00b4d8] flex items-center justify-center">
 						<span class="text-white font-bold text-lg" style="font-family:'Playfair Display',serif">S</span>
 					</div>
-					<span class="font-bold text-xl" style="font-family:'Playfair Display',serif">Live Mauritius</span>
+					<span class="font-bold text-xl" style="font-family:'Playfair Display',serif">Safeer Properties Mauritius</span>
 				</div>
 				<p class="text-gray-400 text-sm leading-relaxed max-w-sm">
 					Your trusted partner for relocation to Mauritius. We handle the complexity so you can enjoy the journey.
@@ -55,7 +55,7 @@
 		</div>
 
 		<div class="border-t border-gray-800 mt-12 pt-8 flex flex-col sm:flex-row justify-between items-center gap-4">
-			<p class="text-gray-500 text-sm">© 2025 Live Mauritius. All rights reserved.</p>
+			<p class="text-gray-500 text-sm">© 2025 Safeer Properties Mauritius. All rights reserved.</p>
 			<p class="text-gray-500 text-sm">Based in Port Louis, Republic of Mauritius 🇲🇺</p>
 		</div>
 	</div>

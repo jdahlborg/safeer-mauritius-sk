@@ -52,7 +52,7 @@
 </script>
 
 <svelte:head>
-	<title>Live Mauritius — Properties &amp; Relocation</title>
+	<title>Safeer Properties Mauritius — Properties &amp; Relocation</title>
 	<meta name="description" content="Browse curated properties for sale and rent in Mauritius. Villas, apartments, land — with full relocation support to help you settle in." />
 </svelte:head>
 
@@ -243,8 +243,8 @@
 		</div>
 		<div class="grid grid-cols-1 md:grid-cols-3 gap-6">
 			{#each [
-				{ initials: 'JB', name: 'James & Sarah B.', from: 'London → Grand Baie, 2024', quote: "Moving our family from London seemed overwhelming. Live Mauritius handled everything — permits, the villa in Tamarin, full setup. We arrived to a home ready to live in." },
-				{ initials: 'MK', name: 'Martin K.', from: 'Amsterdam → Flic en Flac, 2025', quote: "I needed the Premium Visa fast. Live Mauritius had my application ready in days. I was living in Flic en Flac within 6 weeks of my first call. Incredible team." },
+				{ initials: 'JB', name: 'James & Sarah B.', from: 'London → Grand Baie, 2024', quote: "Moving our family from London seemed overwhelming. Safeer Properties Mauritius handled everything — permits, the villa in Tamarin, full setup. We arrived to a home ready to live in." },
+				{ initials: 'MK', name: 'Martin K.', from: 'Amsterdam → Flic en Flac, 2025', quote: "I needed the Premium Visa fast. Safeer Properties Mauritius had my application ready in days. I was living in Flic en Flac within 6 weeks of my first call. Incredible team." },
 				{ initials: 'PD', name: 'Patricia D.', from: 'Cape Town → Bel Ombre, 2024', quote: "They found me the perfect retirement property and handled the permit. What felt impossible became completely manageable. I wish I'd done this years ago." },
 			] as t}
 				<div class="testimonial-card">
@@ -316,7 +316,7 @@
 						</div>
 						<div>
 							<div class="font-semibold text-gray-900">Email</div>
-							<div class="text-gray-600 text-sm">hello@livemauritius.com</div>
+							<div class="text-gray-600 text-sm">hello@safeerproperties.mu</div>
 						</div>
 					</div>
 					<div class="flex items-start gap-4">
