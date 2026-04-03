@@ -228,6 +228,21 @@ export async function savePartner(data: {
 export async function getPartners(): Promise<Partner[]> {
 	const sql = getClient();
 	try {
+		await sql`
+			CREATE TABLE IF NOT EXISTS partners (
+				id           SERIAL PRIMARY KEY,
+				name         TEXT NOT NULL,
+				company      TEXT NOT NULL,
+				email        TEXT NOT NULL,
+				phone        TEXT DEFAULT '',
+				partner_type TEXT DEFAULT '',
+				message      TEXT DEFAULT '',
+				agreed_terms BOOLEAN DEFAULT false,
+				status       TEXT DEFAULT 'pending',
+				notes        TEXT DEFAULT '',
+				created_at   TIMESTAMPTZ DEFAULT NOW()
+			)
+		`;
 		const rows = await sql`SELECT * FROM partners ORDER BY created_at DESC`;
 		return rows as unknown as Partner[];
 	} finally {

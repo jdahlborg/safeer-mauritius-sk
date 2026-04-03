@@ -121,9 +121,13 @@
 
 	// ── Partners ───────────────────────────────────────────
 	async function loadPartners() {
-		const r = await fetch('/api/partners');
-		const d = await r.json();
-		partners = d.partners;
+		try {
+			const r = await fetch('/api/partners');
+			const d = await r.json();
+			partners = d.partners ?? [];
+		} catch {
+			partners = [];
+		}
 		partnersLoaded = true;
 	}
 
