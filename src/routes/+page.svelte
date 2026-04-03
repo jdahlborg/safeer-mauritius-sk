@@ -130,7 +130,7 @@
 		{:else}
 			<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
 				{#each data.featured as listing}
-					<a href={listing.url} target="_blank" rel="noopener noreferrer" class="group bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 flex flex-col">
+					<a href="/properties/{listing.id}" class="group bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 flex flex-col">
 						<div class="relative h-52 bg-gray-100 overflow-hidden">
 							{#if listing.image}
 								<img src={listing.image} alt={listing.title} class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy" />

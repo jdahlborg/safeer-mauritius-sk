@@ -36,6 +36,7 @@
 					<li><a href="/#why-mauritius" class="footer-link">Why Mauritius</a></li>
 					<li><a href="/#faq" class="footer-link">FAQ</a></li>
 					<li><a href="/#contact" class="footer-link">Contact</a></li>
+					<li><a href="/partners" class="footer-link">For Partners</a></li>
 				</ul>
 			</div>
 

@@ -80,7 +80,7 @@
 		{:else}
 			<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
 				{#each filtered as l}
-					<a href={l.url} target="_blank" rel="noopener noreferrer" class="bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100 hover:shadow-md hover:-translate-y-1 transition-all duration-200 flex flex-col">
+					<a href="/properties/{l.id}" class="bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100 hover:shadow-md hover:-translate-y-1 transition-all duration-200 flex flex-col">
 						<div class="relative h-48 bg-gray-100">
 							{#if l.image}
 								<img src={l.image} alt={l.title} class="w-full h-full object-cover" loading="lazy" />

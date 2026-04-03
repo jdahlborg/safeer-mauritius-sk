@@ -116,6 +116,16 @@ export async function getSaved(
 	}
 }
 
+export async function getListing(id: number): Promise<SavedListing | null> {
+	const sql = getClient();
+	try {
+		const rows = await sql`SELECT * FROM saved_listings WHERE id = ${id}`;
+		return rows.length ? parseRow(rows[0] as Record<string, unknown>) : null;
+	} finally {
+		await sql.end();
+	}
+}
+
 export async function deleteListing(id: number): Promise<boolean> {
 	const sql = getClient();
 	try {

@@ -8,6 +8,7 @@
 		{ href: '/#services', label: 'Services' },
 		{ href: '/#why-mauritius', label: 'Why Mauritius' },
 		{ href: '/#faq', label: 'FAQ' },
+		{ href: '/partners', label: 'For Partners' },
 	];
 </script>
 
