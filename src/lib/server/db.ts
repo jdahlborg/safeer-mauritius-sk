@@ -149,3 +149,118 @@ export async function updateNotes(id: number, notes: string): Promise<boolean> {
 export async function exportAll(): Promise<SavedListing[]> {
 	return getSaved();
 }
+
+// ── Partners ─────────────────────────────────────────────────────────────────
+
+export interface Partner {
+	id: number;
+	name: string;
+	company: string;
+	email: string;
+	phone: string;
+	partner_type: string;
+	message: string;
+	agreed_terms: boolean;
+	status: 'pending' | 'active' | 'rejected';
+	notes: string;
+	created_at: string;
+}
+
+export async function initPartnersTable() {
+	const sql = getClient();
+	try {
+		await sql`
+			CREATE TABLE IF NOT EXISTS partners (
+				id           SERIAL PRIMARY KEY,
+				name         TEXT NOT NULL,
+				company      TEXT NOT NULL,
+				email        TEXT NOT NULL,
+				phone        TEXT DEFAULT '',
+				partner_type TEXT DEFAULT '',
+				message      TEXT DEFAULT '',
+				agreed_terms BOOLEAN DEFAULT false,
+				status       TEXT DEFAULT 'pending',
+				notes        TEXT DEFAULT '',
+				created_at   TIMESTAMPTZ DEFAULT NOW()
+			)
+		`;
+	} finally {
+		await sql.end();
+	}
+}
+
+export async function savePartner(data: {
+	name: string; company: string; email: string; phone: string;
+	partner_type: string; message: string; agreed_terms: boolean;
+}): Promise<{ ok: boolean; id?: number; error?: string }> {
+	const sql = getClient();
+	try {
+		// ensure table exists
+		await sql`
+			CREATE TABLE IF NOT EXISTS partners (
+				id           SERIAL PRIMARY KEY,
+				name         TEXT NOT NULL,
+				company      TEXT NOT NULL,
+				email        TEXT NOT NULL,
+				phone        TEXT DEFAULT '',
+				partner_type TEXT DEFAULT '',
+				message      TEXT DEFAULT '',
+				agreed_terms BOOLEAN DEFAULT false,
+				status       TEXT DEFAULT 'pending',
+				notes        TEXT DEFAULT '',
+				created_at   TIMESTAMPTZ DEFAULT NOW()
+			)
+		`;
+		const rows = await sql`
+			INSERT INTO partners (name, company, email, phone, partner_type, message, agreed_terms)
+			VALUES (${data.name}, ${data.company}, ${data.email}, ${data.phone},
+			        ${data.partner_type}, ${data.message}, ${data.agreed_terms})
+			RETURNING id
+		`;
+		return { ok: true, id: rows[0].id as number };
+	} catch (e: unknown) {
+		return { ok: false, error: e instanceof Error ? e.message : String(e) };
+	} finally {
+		await sql.end();
+	}
+}
+
+export async function getPartners(): Promise<Partner[]> {
+	const sql = getClient();
+	try {
+		const rows = await sql`SELECT * FROM partners ORDER BY created_at DESC`;
+		return rows as unknown as Partner[];
+	} finally {
+		await sql.end();
+	}
+}
+
+export async function updatePartnerStatus(id: number, status: string): Promise<boolean> {
+	const sql = getClient();
+	try {
+		const result = await sql`UPDATE partners SET status = ${status} WHERE id = ${id}`;
+		return result.count > 0;
+	} finally {
+		await sql.end();
+	}
+}
+
+export async function updatePartnerNotes(id: number, notes: string): Promise<boolean> {
+	const sql = getClient();
+	try {
+		const result = await sql`UPDATE partners SET notes = ${notes} WHERE id = ${id}`;
+		return result.count > 0;
+	} finally {
+		await sql.end();
+	}
+}
+
+export async function deletePartner(id: number): Promise<boolean> {
+	const sql = getClient();
+	try {
+		const result = await sql`DELETE FROM partners WHERE id = ${id}`;
+		return result.count > 0;
+	} finally {
+		await sql.end();
+	}
+}

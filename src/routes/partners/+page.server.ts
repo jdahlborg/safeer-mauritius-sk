@@ -1,6 +1,7 @@
 import { Resend } from 'resend';
 import { env } from '$env/dynamic/private';
 import { fail } from '@sveltejs/kit';
+import { savePartner } from '$lib/server/db';
 import type { Actions } from './$types';
 
 export const actions: Actions = {
@@ -21,6 +22,9 @@ export const actions: Actions = {
 		if (!agreed) {
 			return fail(400, { error: 'You must agree to the partner terms to proceed.' });
 		}
+
+		// Save to DB
+		await savePartner({ name, company, email, phone, partner_type: partnerType, message, agreed_terms: agreed });
 
 		const resend = new Resend(env.RESEND_API_KEY);
 
