@@ -1,3 +1,11 @@
+<script lang="ts">
+	import { enhance } from '$app/forms';
+	import type { ActionData } from './$types';
+
+	let { form }: { form: ActionData } = $props();
+	let submitting = $state(false);
+</script>
+
 <svelte:head>
 	<title>Partner with Safeer Properties — Reach International Buyers in Mauritius</title>
 	<meta name="description" content="Safeer Properties connects Mauritius property developers and agencies with qualified international buyers. List your properties and reach a global audience today." />
@@ -353,50 +361,86 @@
 			<h2 class="text-4xl font-bold mb-4" style="font-family:'Playfair Display',serif">Partner with Safeer Properties</h2>
 			<p class="text-white/60">Tell us about your properties and we'll be in touch within one business day.</p>
 		</div>
-		<form
-			action="https://formspree.io/f/hello@safeer.mu"
-			method="POST"
-			class="bg-white/5 rounded-2xl p-8 border border-white/10 space-y-5"
-		>
-			<div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
-				<div>
-					<label class="block text-sm font-medium text-white/70 mb-1.5">Your Name *</label>
-					<input type="text" name="name" required class="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-white placeholder-white/30 focus:outline-none focus:border-[#c9a96e] transition-colors" placeholder="Jean Dupont" />
+
+		{#if form?.success}
+			<div class="bg-[#2d6a4f]/30 border border-[#2d6a4f] rounded-2xl p-10 text-center">
+				<div class="text-5xl mb-4">✓</div>
+				<h3 class="text-2xl font-bold mb-3" style="font-family:'Playfair Display',serif">Application received, {form.name}!</h3>
+				<p class="text-white/70 leading-relaxed">We've sent a confirmation to your email with your application summary and a copy of the partner terms. We'll be in touch within one business day.</p>
+				<a href="/partners/terms" class="inline-block mt-6 text-[#c9a96e] hover:underline text-sm">Review the full partner terms →</a>
+			</div>
+		{:else}
+			<form
+				method="POST"
+				use:enhance={() => {
+					submitting = true;
+					return async ({ update }) => {
+						submitting = false;
+						update();
+					};
+				}}
+				class="bg-white/5 rounded-2xl p-8 border border-white/10 space-y-5"
+			>
+				{#if form?.error}
+					<div class="bg-red-500/20 border border-red-400/40 rounded-xl px-4 py-3 text-sm text-red-200">{form.error}</div>
+				{/if}
+
+				<div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+					<div>
+						<label class="block text-sm font-medium text-white/70 mb-1.5">Your Name *</label>
+						<input type="text" name="name" required class="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-white placeholder-white/30 focus:outline-none focus:border-[#c9a96e] transition-colors" placeholder="Jean Dupont" />
+					</div>
+					<div>
+						<label class="block text-sm font-medium text-white/70 mb-1.5">Company / Agency *</label>
+						<input type="text" name="company" required class="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-white placeholder-white/30 focus:outline-none focus:border-[#c9a96e] transition-colors" placeholder="Ally's Real Estate" />
+					</div>
+				</div>
+				<div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+					<div>
+						<label class="block text-sm font-medium text-white/70 mb-1.5">Email Address *</label>
+						<input type="email" name="email" required class="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-white placeholder-white/30 focus:outline-none focus:border-[#c9a96e] transition-colors" placeholder="you@agency.mu" />
+					</div>
+					<div>
+						<label class="block text-sm font-medium text-white/70 mb-1.5">WhatsApp / Phone</label>
+						<input type="tel" name="phone" class="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-white placeholder-white/30 focus:outline-none focus:border-[#c9a96e] transition-colors" placeholder="+230 5700 0000" />
+					</div>
 				</div>
 				<div>
-					<label class="block text-sm font-medium text-white/70 mb-1.5">Company / Agency *</label>
-					<input type="text" name="company" required class="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-white placeholder-white/30 focus:outline-none focus:border-[#c9a96e] transition-colors" placeholder="Ally's Real Estate" />
+					<label class="block text-sm font-medium text-white/70 mb-1.5">What type of partner are you?</label>
+					<select name="partner_type" class="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#c9a96e] transition-colors">
+						<option value="" class="text-gray-900">Select one…</option>
+						<option value="developer" class="text-gray-900">Property Developer</option>
+						<option value="agency" class="text-gray-900">Real Estate Agency</option>
+						<option value="agent" class="text-gray-900">Independent Agent</option>
+						<option value="other" class="text-gray-900">Other</option>
+					</select>
 				</div>
-			</div>
-			<div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
 				<div>
-					<label class="block text-sm font-medium text-white/70 mb-1.5">Email Address *</label>
-					<input type="email" name="email" required class="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-white placeholder-white/30 focus:outline-none focus:border-[#c9a96e] transition-colors" placeholder="you@agency.mu" />
+					<label class="block text-sm font-medium text-white/70 mb-1.5">Tell us about your portfolio</label>
+					<textarea name="message" rows="4" class="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-white placeholder-white/30 focus:outline-none focus:border-[#c9a96e] transition-colors resize-none" placeholder="Number of listings, property types, price range, target buyers…"></textarea>
 				</div>
-				<div>
-					<label class="block text-sm font-medium text-white/70 mb-1.5">WhatsApp / Phone</label>
-					<input type="tel" name="phone" class="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-white placeholder-white/30 focus:outline-none focus:border-[#c9a96e] transition-colors" placeholder="+230 5700 0000" />
+
+				<!-- Terms checkbox -->
+				<div class="bg-white/5 rounded-xl border border-white/10 p-4">
+					<label class="flex items-start gap-3 cursor-pointer">
+						<input type="checkbox" name="agree_terms" required class="mt-0.5 w-4 h-4 accent-[#c9a96e] flex-shrink-0" />
+						<span class="text-sm text-white/70 leading-relaxed">
+							I have read and agree to the <a href="/partners/terms" target="_blank" class="text-[#c9a96e] hover:underline font-medium">Safeer Properties Partner Terms</a>, including the referral fee structure (1.5% on sales, 50% of first month's rent on long-term rentals).
+						</span>
+					</label>
 				</div>
-			</div>
-			<div>
-				<label class="block text-sm font-medium text-white/70 mb-1.5">What type of partner are you?</label>
-				<select name="partner_type" class="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#c9a96e] transition-colors">
-					<option value="" class="text-gray-900">Select one…</option>
-					<option value="developer" class="text-gray-900">Property Developer</option>
-					<option value="agency" class="text-gray-900">Real Estate Agency</option>
-					<option value="agent" class="text-gray-900">Independent Agent</option>
-					<option value="other" class="text-gray-900">Other</option>
-				</select>
-			</div>
-			<div>
-				<label class="block text-sm font-medium text-white/70 mb-1.5">Tell us about your portfolio</label>
-				<textarea name="message" rows="4" class="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-white placeholder-white/30 focus:outline-none focus:border-[#c9a96e] transition-colors resize-none" placeholder="Number of listings, property types, price range, target buyers…"></textarea>
-			</div>
-			<button type="submit" class="w-full bg-[#c9a96e] text-white font-bold py-4 rounded-xl hover:bg-[#b8935a] transition-colors flex items-center justify-center gap-2">
-				Send Partner Enquiry
-				<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
-			</button>
-			<p class="text-white/40 text-xs text-center">We respond within one business day. No spam, ever.</p>
-		</form>
+
+				<button type="submit" disabled={submitting} class="w-full bg-[#c9a96e] text-white font-bold py-4 rounded-xl hover:bg-[#b8935a] transition-colors flex items-center justify-center gap-2 disabled:opacity-60">
+					{#if submitting}
+						<svg class="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+						Sending…
+					{:else}
+						Send Partner Enquiry
+						<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
+					{/if}
+				</button>
+				<p class="text-white/40 text-xs text-center">We respond within one business day. No spam, ever.</p>
+			</form>
+		{/if}
 	</div>
 </section>

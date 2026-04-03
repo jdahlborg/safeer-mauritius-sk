@@ -25,6 +25,7 @@
 	},
 	"dependencies": {
 		"cheerio": "^1.2.0",
-		"postgres": "^3.4.8"
+		"postgres": "^3.4.8",
+		"resend": "^6.10.0"
 	}
 }
