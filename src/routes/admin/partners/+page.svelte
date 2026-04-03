@@ -44,6 +44,32 @@
 	const TYPE_LABELS: Record<string, string> = {
 		developer: 'Developer', agency: 'Agency', agent: 'Agent', other: 'Other'
 	};
+
+	// ── Add partner form ───────────────────────────────────
+	let showAddForm = $state(false);
+	let adding = $state(false);
+	let newPartner = $state({ name: '', company: '', email: '', phone: '', partner_type: '', message: '' });
+
+	async function addPartner() {
+		if (!newPartner.name || !newPartner.company || !newPartner.email) return;
+		adding = true;
+		const r = await fetch('/api/partners', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify(newPartner)
+		});
+		const d = await r.json();
+		if (d.ok) {
+			// Reload list
+			const res = await fetch('/api/partners');
+			const data = await res.json();
+			partners = data.partners;
+			newPartner = { name: '', company: '', email: '', phone: '', partner_type: '', message: '' };
+			showAddForm = false;
+			showToast('Partner added');
+		}
+		adding = false;
+	}
 </script>
 
 <svelte:head>
@@ -58,8 +84,59 @@
 			<h1 class="text-3xl font-bold text-gray-900" style="font-family:'Playfair Display',serif">Partners</h1>
 			<p class="text-gray-500 text-sm mt-1">Manage property developer and agency partner applications</p>
 		</div>
-		<a href="/partners" target="_blank" rel="noopener noreferrer" class="btn-outline text-sm px-4 py-2">View partner page ↗</a>
+		<div class="flex gap-3">
+			<a href="/partners" target="_blank" rel="noopener noreferrer" class="btn-outline text-sm px-4 py-2">View partner page ↗</a>
+			<button onclick={() => (showAddForm = !showAddForm)} class="btn-primary text-sm px-4 py-2">
+				{showAddForm ? 'Cancel' : '+ Add Partner'}
+			</button>
+		</div>
 	</div>
+
+	<!-- Add partner form -->
+	{#if showAddForm}
+		<div class="bg-white rounded-2xl border border-[#0077b6]/30 shadow-sm p-6 mb-8">
+			<h2 class="font-bold text-gray-900 mb-5">Add Partner Manually</h2>
+			<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
+				<div>
+					<label for="np-name" class="form-label">Name *</label>
+					<input id="np-name" type="text" bind:value={newPartner.name} class="form-input text-sm py-2" placeholder="Jean Dupont" />
+				</div>
+				<div>
+					<label for="np-company" class="form-label">Company *</label>
+					<input id="np-company" type="text" bind:value={newPartner.company} class="form-input text-sm py-2" placeholder="Ally's Real Estate" />
+				</div>
+				<div>
+					<label for="np-email" class="form-label">Email *</label>
+					<input id="np-email" type="email" bind:value={newPartner.email} class="form-input text-sm py-2" placeholder="jean@agency.mu" />
+				</div>
+				<div>
+					<label for="np-phone" class="form-label">Phone / WhatsApp</label>
+					<input id="np-phone" type="tel" bind:value={newPartner.phone} class="form-input text-sm py-2" placeholder="+230 5700 0000" />
+				</div>
+				<div>
+					<label for="np-type" class="form-label">Partner Type</label>
+					<select id="np-type" bind:value={newPartner.partner_type} class="form-input text-sm py-2">
+						<option value="">— select —</option>
+						<option value="developer">Developer</option>
+						<option value="agency">Agency</option>
+						<option value="agent">Agent</option>
+						<option value="other">Other</option>
+					</select>
+				</div>
+			</div>
+			<div class="mb-4">
+				<label for="np-message" class="form-label">Notes / Portfolio</label>
+				<textarea id="np-message" bind:value={newPartner.message} rows="2" class="form-input text-sm resize-none" placeholder="Number of listings, property types, areas covered…"></textarea>
+			</div>
+			<button
+				onclick={addPartner}
+				disabled={adding || !newPartner.name || !newPartner.company || !newPartner.email}
+				class="btn-primary text-sm px-6 py-2 disabled:opacity-50"
+			>
+				{adding ? 'Adding…' : 'Add as Pending Partner'}
+			</button>
+		</div>
+	{/if}
 
 	<!-- Summary -->
 	<div class="grid grid-cols-3 gap-4 mb-8">
