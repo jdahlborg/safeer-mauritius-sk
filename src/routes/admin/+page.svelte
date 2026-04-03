@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { SavedListing, Partner } from '$lib/server/db';
+	import type { SavedListing } from '$lib/server/db';
 
 	type Listing = {
 		title: string; url: string; location: string; price: string;
@@ -34,12 +34,8 @@
 	// ── Saved state ────────────────────────────────────────
 	let savedListings = $state<SavedListing[]>([]);
 	let savedSearch = $state('');
-	let activeTab = $state<'search' | 'saved' | 'partners'>('search');
+	let activeTab = $state<'search' | 'saved'>('search');
 	let toast = $state('');
-
-	// ── Partners state ─────────────────────────────────────
-	let partners = $state<Partner[]>([]);
-	let partnersLoaded = $state(false);
 
 	// ── Load saved on mount ────────────────────────────────
 	async function loadSaved() {
@@ -119,41 +115,6 @@
 		setTimeout(() => (toast = ''), 3000);
 	}
 
-	// ── Partners ───────────────────────────────────────────
-	async function loadPartners() {
-		try {
-			const r = await fetch('/api/partners');
-			const d = await r.json();
-			partners = d.partners ?? [];
-		} catch {
-			partners = [];
-		}
-		partnersLoaded = true;
-	}
-
-	async function setPartnerStatus(id: number, status: string) {
-		await fetch(`/api/partners/${id}`, {
-			method: 'PATCH',
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({ status })
-		});
-		partners = partners.map(p => p.id === id ? { ...p, status: status as Partner['status'] } : p);
-	}
-
-	async function updatePartnerNotes(id: number, notes: string) {
-		await fetch(`/api/partners/${id}`, {
-			method: 'PATCH',
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({ notes })
-		});
-	}
-
-	async function removePartner(id: number) {
-		await fetch(`/api/partners/${id}`, { method: 'DELETE' });
-		partners = partners.filter(p => p.id !== id);
-		showToast('Partner removed');
-	}
-
 	// Load saved on initial render
 	$effect(() => {
 		loadSaved();
@@ -164,7 +125,7 @@
 	<title>Property Dashboard — Safeer Properties</title>
 </svelte:head>
 
-<div class="min-h-screen bg-gray-50 pt-24 pb-16">
+<div class="pb-16">
 	<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
 		<!-- Header -->
@@ -197,14 +158,6 @@
 				class:border-transparent={activeTab !== 'saved'}
 				class:text-gray-500={activeTab !== 'saved'}
 			>Saved ({savedListings.length})</button>
-		<button
-			onclick={() => { activeTab = 'partners'; if (!partnersLoaded) loadPartners(); }}
-			class="px-5 py-3 text-sm font-medium border-b-2 transition-colors"
-			class:border-[#0077b6]={activeTab === 'partners'}
-			class:text-[#0077b6]={activeTab === 'partners'}
-			class:border-transparent={activeTab !== 'partners'}
-			class:text-gray-500={activeTab !== 'partners'}
-		>Partners {#if partnersLoaded}({partners.length}){/if}</button>
 		</div>
 
 		<!-- ── SEARCH TAB ── -->
@@ -409,114 +362,6 @@
 									<a href={listing.url} target="_blank" rel="noopener noreferrer" class="flex-1 text-center text-xs py-2 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors">View listing</a>
 								</div>
 								<p class="text-gray-400 text-xs mt-2">Saved {new Date(listing.saved_at).toLocaleDateString()}</p>
-							</div>
-						</div>
-					{/each}
-				</div>
-			{/if}
-		{/if}
-
-		<!-- ── PARTNERS TAB ── -->
-		{#if activeTab === 'partners'}
-			{#if !partnersLoaded}
-				<div class="text-center py-20 text-gray-400">
-					<div class="animate-spin w-8 h-8 border-2 border-[#0077b6] border-t-transparent rounded-full mx-auto mb-4"></div>
-					Loading partners…
-				</div>
-			{:else if partners.length === 0}
-				<div class="text-center py-20 text-gray-400">
-					<p class="text-lg font-medium">No partner applications yet</p>
-					<p class="text-sm mt-1">Applications submitted via <a href="/partners" class="text-[#0077b6] hover:underline">/partners</a> will appear here</p>
-				</div>
-			{:else}
-				<!-- Summary counts -->
-				<div class="flex gap-4 mb-6">
-					{#each [
-						{ label: 'Pending', status: 'pending', color: 'text-amber-600 bg-amber-50 border-amber-200' },
-						{ label: 'Active', status: 'active', color: 'text-[#2d6a4f] bg-green-50 border-green-200' },
-						{ label: 'Rejected', status: 'rejected', color: 'text-red-600 bg-red-50 border-red-200' },
-					] as badge}
-						{@const count = partners.filter(p => p.status === badge.status).length}
-						<div class="px-4 py-2 rounded-lg border text-sm font-semibold {badge.color}">
-							{badge.label}: {count}
-						</div>
-					{/each}
-				</div>
-
-				<div class="space-y-4">
-					{#each partners as partner}
-						<div class="bg-white rounded-2xl border shadow-sm overflow-hidden
-							{partner.status === 'active' ? 'border-[#2d6a4f]/40' : partner.status === 'rejected' ? 'border-red-200 opacity-75' : 'border-gray-100'}">
-							<div class="p-5 flex flex-col sm:flex-row sm:items-start gap-4">
-
-								<!-- Info -->
-								<div class="flex-1 min-w-0">
-									<div class="flex items-center gap-2 flex-wrap mb-1">
-										<h3 class="font-semibold text-gray-900">{partner.company}</h3>
-										<span class="text-xs px-2 py-0.5 rounded-full font-medium
-											{partner.status === 'active' ? 'bg-[#2d6a4f] text-white' : partner.status === 'rejected' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}">
-											{partner.status}
-										</span>
-										{#if partner.partner_type}
-											<span class="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">
-												{partner.partner_type === 'developer' ? 'Developer' : partner.partner_type === 'agency' ? 'Agency' : partner.partner_type === 'agent' ? 'Agent' : partner.partner_type}
-											</span>
-										{/if}
-										{#if partner.agreed_terms}
-											<span class="text-xs text-[#2d6a4f] font-medium">✓ Terms agreed</span>
-										{/if}
-									</div>
-									<p class="text-sm text-gray-600 mb-0.5">{partner.name} · <a href="mailto:{partner.email}" class="text-[#0077b6] hover:underline">{partner.email}</a>{partner.phone ? ` · ${partner.phone}` : ''}</p>
-									{#if partner.message}
-										<p class="text-sm text-gray-500 mt-2 leading-relaxed">{partner.message}</p>
-									{/if}
-									<p class="text-xs text-gray-400 mt-2">{new Date(partner.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
-								</div>
-
-								<!-- Actions -->
-								<div class="flex flex-col gap-2 sm:items-end shrink-0">
-									<div class="flex gap-2">
-										<button
-											onclick={() => setPartnerStatus(partner.id, 'active')}
-											disabled={partner.status === 'active'}
-											class="text-xs px-3 py-1.5 rounded-lg font-medium transition-colors
-												{partner.status === 'active' ? 'bg-[#2d6a4f] text-white cursor-default' : 'bg-[#2d6a4f]/10 text-[#2d6a4f] hover:bg-[#2d6a4f]/20'}">
-											Activate
-										</button>
-										<button
-											onclick={() => setPartnerStatus(partner.id, 'pending')}
-											disabled={partner.status === 'pending'}
-											class="text-xs px-3 py-1.5 rounded-lg font-medium transition-colors
-												{partner.status === 'pending' ? 'bg-amber-500 text-white cursor-default' : 'bg-amber-50 text-amber-700 hover:bg-amber-100'}">
-											Pending
-										</button>
-										<button
-											onclick={() => setPartnerStatus(partner.id, 'rejected')}
-											disabled={partner.status === 'rejected'}
-											class="text-xs px-3 py-1.5 rounded-lg font-medium transition-colors
-												{partner.status === 'rejected' ? 'bg-red-500 text-white cursor-default' : 'bg-red-50 text-red-600 hover:bg-red-100'}">
-											Reject
-										</button>
-									</div>
-									<div class="flex gap-2">
-										<a href="mailto:{partner.email}" class="text-xs px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors">Email</a>
-										{#if partner.phone}
-											<a href="https://wa.me/{partner.phone.replace(/\D/g,'')}" target="_blank" rel="noopener noreferrer" class="text-xs px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors">WhatsApp</a>
-										{/if}
-										<button onclick={() => removePartner(partner.id)} class="text-xs px-3 py-1.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-colors">Delete</button>
-									</div>
-								</div>
-							</div>
-
-							<!-- Notes -->
-							<div class="px-5 pb-4 border-t border-gray-50 pt-3">
-								<textarea
-									class="form-input text-xs resize-none py-2 w-full"
-									rows="2"
-									placeholder="Internal notes about this partner…"
-									value={partner.notes}
-									oninput={(e) => updatePartnerNotes(partner.id, (e.target as HTMLTextAreaElement).value)}
-								></textarea>
 							</div>
 						</div>
 					{/each}
