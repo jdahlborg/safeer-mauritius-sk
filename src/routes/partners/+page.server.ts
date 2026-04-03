@@ -48,7 +48,7 @@ export const actions: Actions = {
 					<tr><td style="padding:6px 12px;color:#666">Company</td><td style="padding:6px 12px;font-weight:600">${company}</td></tr>
 					<tr><td style="padding:6px 12px;color:#666">Email</td><td style="padding:6px 12px"><a href="mailto:${email}">${email}</a></td></tr>
 					<tr><td style="padding:6px 12px;color:#666">Phone</td><td style="padding:6px 12px">${phone || '—'}</td></tr>
-					<tr><td style="padding:6px 12px;color:#666">Type</td><td style="padding:6px 12px">${partnerTypeLabels[partnerType] ?? partnerType || '—'}</td></tr>
+					<tr><td style="padding:6px 12px;color:#666">Type</td><td style="padding:6px 12px">${(partnerTypeLabels[partnerType] ?? partnerType) || '—'}</td></tr>
 					<tr><td style="padding:6px 12px;color:#666;vertical-align:top">Portfolio</td><td style="padding:6px 12px">${message || '—'}</td></tr>
 					<tr><td style="padding:6px 12px;color:#666">Terms agreed</td><td style="padding:6px 12px;color:#2d6a4f;font-weight:600">✓ Yes</td></tr>
 				</table>
@@ -68,7 +68,7 @@ export const actions: Actions = {
 					<div style="background:#f8f8f8;border-radius:12px;padding:20px 24px;margin:24px 0;border-left:4px solid #c9a96e">
 						<p style="margin:0 0 6px;font-weight:600">Your application summary:</p>
 						<p style="margin:4px 0;color:#555;font-size:14px"><strong>Company:</strong> ${company}</p>
-						<p style="margin:4px 0;color:#555;font-size:14px"><strong>Type:</strong> ${partnerTypeLabels[partnerType] ?? partnerType || '—'}</p>
+						<p style="margin:4px 0;color:#555;font-size:14px"><strong>Type:</strong> ${(partnerTypeLabels[partnerType] ?? partnerType) || '—'}</p>
 						<p style="margin:4px 0;color:#2d6a4f;font-size:14px;font-weight:600">✓ Partner terms accepted</p>
 					</div>
 
