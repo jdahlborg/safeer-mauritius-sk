@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte';
+	import { REGIONS, REGION_NAMES, type Region } from '$lib/regions';
 
 	interface MapListing {
 		id: number;
@@ -13,16 +14,18 @@
 		lng: number;
 	}
 
-	let { listings, activeId = $bindable(null) }: {
+	let { listings, activeId = $bindable(null), activeRegion = $bindable(null) }: {
 		listings: MapListing[];
 		activeId?: number | null;
+		activeRegion?: Region | null;
 	} = $props();
 
 	let mapEl: HTMLDivElement;
 	let map: import('leaflet').Map | null = null;
 	let markers: Map<number, import('leaflet').Marker> = new Map();
+	let regionLayers: Map<Region, import('leaflet').Rectangle> = new Map();
 
-	const MAURITIUS: [number, number] = [-20.2, 57.55];
+	const MAURITIUS: [number, number] = [-20.25, 57.55];
 
 	onMount(async () => {
 		const L = (await import('leaflet')).default;
@@ -34,12 +37,57 @@
 			maxZoom: 18,
 		}).addTo(map);
 
+		drawRegions(L);
 		addMarkers(L);
 	});
 
 	onDestroy(() => {
 		map?.remove();
 	});
+
+	function regionStyle(name: Region, active: boolean) {
+		const color = REGIONS[name].color;
+		return {
+			color,
+			weight: active ? 2.5 : 1.5,
+			fillColor: color,
+			fillOpacity: active ? 0.18 : 0.06,
+			opacity: active ? 0.85 : 0.35,
+		};
+	}
+
+	function drawRegions(L: typeof import('leaflet')) {
+		if (!map) return;
+		regionLayers.forEach(r => r.remove());
+		regionLayers = new Map();
+
+		for (const name of REGION_NAMES) {
+			const cfg = REGIONS[name];
+			const rect = L.rectangle(cfg.bounds, regionStyle(name, false)).addTo(map!);
+
+			// Label
+			L.marker(cfg.center, {
+				icon: L.divIcon({
+					className: '',
+					html: `<div style="font-size:11px;font-weight:700;color:${cfg.color};text-shadow:0 1px 3px rgba(255,255,255,0.9),0 0 6px white;letter-spacing:0.05em;white-space:nowrap;pointer-events:none">${name.toUpperCase()}</div>`,
+					iconAnchor: [24, 8],
+				}),
+				interactive: false,
+			}).addTo(map!);
+
+			rect.on('click', () => {
+				activeRegion = activeRegion === name ? null : name;
+			});
+			rect.on('mouseover', () => {
+				if (activeRegion !== name) rect.setStyle({ fillOpacity: 0.12, opacity: 0.55 });
+			});
+			rect.on('mouseout', () => {
+				if (activeRegion !== name) rect.setStyle(regionStyle(name, false));
+			});
+
+			regionLayers.set(name, rect);
+		}
+	}
 
 	function makeIcon(L: typeof import('leaflet'), payment: string, active = false) {
 		const color = payment === 'rent' ? '#2d6a4f' : '#0077b6';
@@ -75,7 +123,14 @@
 		}
 	}
 
-	// React to activeId changes — highlight marker
+	// Re-add markers when listings change
+	$effect(() => {
+		listings; // track
+		if (!map) return;
+		import('leaflet').then(({ default: L }) => addMarkers(L));
+	});
+
+	// Highlight active marker
 	$effect(() => {
 		if (!map) return;
 		import('leaflet').then(({ default: L }) => {
@@ -89,6 +144,21 @@
 				}
 			});
 		});
+	});
+
+	// Highlight active region
+	$effect(() => {
+		const ar = activeRegion; // track
+		regionLayers.forEach((rect, name) => {
+			rect.setStyle(regionStyle(name, name === ar));
+		});
+		// Pan to region center when selected
+		if (ar && map) {
+			const cfg = REGIONS[ar];
+			map.fitBounds(cfg.bounds as [[number, number], [number, number]], { padding: [20, 20], animate: true });
+		} else if (!ar && map) {
+			map.setView(MAURITIUS, 10, { animate: true });
+		}
 	});
 </script>
 

@@ -1,32 +1,26 @@
 <script lang="ts">
 	import type { PageData } from './$types';
-	import PropertyMap from '$lib/components/PropertyMap.svelte';
+	import { goto } from '$app/navigation';
 
 	let { data }: { data: PageData } = $props();
 
 	let toast = $state(false);
 	let submitting = $state(false);
 
-	// ── Property filters ──────────────────────────────────
-	let tab = $state<'all' | 'buy' | 'rent'>('all');
-	let filterType = $state('');
-	let filterArea = $state('');
-	let activeId = $state<number | null>(null);
+	// ── Search form ────────────────────────────────────────
+	let payment = $state('buy');
+	let searchQ = $state('');
+	let searchType = $state('');
+	let searchBeds = $state('');
 
-	const listings = data.listings;
-	const areas = [...new Set(listings.map((l: typeof listings[0]) => l.location.split(',')[1]?.trim()).filter(Boolean))].sort();
-	const types = [...new Set(listings.map((l: typeof listings[0]) => l.property_type).filter(Boolean))].sort();
-
-	const filtered = $derived(
-		listings.filter((l: typeof listings[0]) => {
-			if (tab !== 'all' && l.payment !== tab) return false;
-			if (filterType && l.property_type !== filterType) return false;
-			if (filterArea && !l.location.includes(filterArea)) return false;
-			return true;
-		})
-	);
-
-	const mappable = $derived(filtered.filter((l: typeof listings[0]) => l.lat != null && l.lng != null));
+	function search() {
+		const params = new URLSearchParams();
+		params.set('payment', payment);
+		if (searchQ) params.set('q', searchQ);
+		if (searchType) params.set('type', searchType);
+		if (searchBeds) params.set('minBeds', searchBeds);
+		goto(`/properties?${params.toString()}`);
+	}
 
 	const faqs = [
 		{
@@ -72,183 +66,104 @@
 		setTimeout(() => (toast = false), 4000);
 	}
 </script>
-
 <svelte:head>
 	<title>Safeer Properties — Properties &amp; Relocation</title>
 	<meta name="description" content="Safeer Properties Mauritius — curated properties for sale and rent across the island. Villas, apartments, land, with full relocation support." />
 </svelte:head>
 
-
 <!-- ===================== HERO ===================== -->
-<section id="home" class="relative min-h-[90vh] flex items-center overflow-hidden">
+<section id="home" class="relative min-h-screen flex flex-col justify-center overflow-hidden">
 	<div class="absolute inset-0">
 		<img
 			src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=1920&q=85&fit=crop"
 			alt="Mauritius villa"
 			class="w-full h-full object-cover"
 		/>
-		<div class="absolute inset-0 bg-gradient-to-r from-[#00264d]/90 via-[#003d6b]/65 to-transparent"></div>
+		<div class="absolute inset-0 bg-gradient-to-b from-[#001f3f]/65 via-[#003366]/55 to-[#001f3f]/75"></div>
 	</div>
 
-	<div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-28 pb-16">
-		<div class="max-w-2xl">
-			<span class="inline-block bg-white/20 backdrop-blur-sm text-white text-sm font-medium px-4 py-1.5 rounded-full mb-6 border border-white/30">
+	<div class="relative max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-28 pb-16 w-full">
+
+		<!-- Title -->
+		<div class="text-center mb-8">
+			<span class="inline-block bg-white/15 backdrop-blur-sm text-white/90 text-sm font-medium px-4 py-1.5 rounded-full mb-5 border border-white/25">
 				🏠 Curated Mauritius Properties
 			</span>
-			<h1 class="font-bold text-5xl sm:text-6xl lg:text-7xl text-white leading-tight mb-6" style="font-family:'Playfair Display',serif">
-				Find Your Home<br/>
-				in <span class="text-[#f4e4c1]">Mauritius</span>
+			<h1 class="font-bold text-5xl sm:text-6xl text-white leading-tight mb-4" style="font-family:'Playfair Display',serif">
+				Find Your Home<br/>in <span class="text-[#f4e4c1]">Mauritius</span>
 			</h1>
-			<p class="text-lg sm:text-xl text-white/85 leading-relaxed mb-10 max-w-xl">
-				Villas, apartments, and land across the island — handpicked by local experts. We find the property and handle everything else: visas, legal, banking, and settling in.
+			<p class="text-lg text-white/80 max-w-xl mx-auto">
+				Villas, apartments &amp; land across the island — handpicked by local experts
 			</p>
-			<div class="flex flex-wrap gap-4">
-				<a href="/properties" class="btn-primary text-base px-8 py-4 inline-flex items-center gap-2">
-					Browse Properties
-					<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
-				</a>
-				<a href="#contact" class="btn-outline-white text-base px-8 py-4">Talk to an Expert</a>
-			</div>
-
-			<div class="mt-14 flex flex-wrap gap-8">
-				<div class="text-white">
-					<div class="text-4xl font-bold text-[#f4e4c1]" style="font-family:'Playfair Display',serif">500+</div>
-					<div class="text-white/70 text-sm mt-1">Families Relocated</div>
-				</div>
-				<div class="text-white">
-					<div class="text-4xl font-bold text-[#f4e4c1]" style="font-family:'Playfair Display',serif">15%</div>
-					<div class="text-white/70 text-sm mt-1">Flat Income Tax</div>
-				</div>
-				<div class="text-white">
-					<div class="text-4xl font-bold text-[#f4e4c1]" style="font-family:'Playfair Display',serif">12+</div>
-					<div class="text-white/70 text-sm mt-1">Years Local Expertise</div>
-				</div>
-			</div>
-		</div>
-	</div>
-</section>
-
-
-<!-- ===================== FEATURED PROPERTIES ===================== -->
-<section id="properties" class="py-20 bg-white">
-	<div class="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8">
-
-		<!-- Header -->
-		<div class="flex items-end justify-between mb-6">
-			<div>
-				<span class="section-tag">Listings</span>
-				<h2 class="section-title mt-2">Properties in Mauritius</h2>
-			</div>
-			<a href="/properties" class="hidden sm:inline-flex items-center gap-2 text-[#0077b6] font-medium text-sm hover:underline">
-				View all listings
-				<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
-			</a>
 		</div>
 
-		<!-- Filters -->
-		<div class="flex flex-wrap items-center gap-2 mb-6">
-			<div class="flex rounded-lg border border-gray-200 overflow-hidden text-sm">
-				{#each [['all','All'], ['buy','For Sale'], ['rent','For Rent']] as [val, label]}
+		<!-- Search card -->
+		<div class="bg-white rounded-2xl shadow-2xl overflow-hidden">
+			<!-- Buy / Rent tabs -->
+			<div class="flex border-b border-gray-100">
+				{#each [['buy', 'For Sale'], ['rent', 'To Rent']] as [val, label]}
 					<button
-						onclick={() => (tab = val as typeof tab)}
-						class="px-3 py-1.5 font-medium transition-colors"
-						class:bg-[#0077b6]={tab === val}
-						class:text-white={tab === val}
-						class:text-gray-600={tab !== val}
-						class:hover:bg-gray-50={tab !== val}
-					>{label}</button>
+						onclick={() => (payment = val)}
+						class="flex-1 py-3.5 text-sm font-semibold transition-colors relative"
+						class:text-[#0077b6]={payment === val}
+						class:text-gray-400={payment !== val}
+						class:bg-white={payment === val}
+						class:bg-gray-50={payment !== val}
+					>
+						{label}
+						{#if payment === val}
+							<span class="absolute bottom-0 left-0 right-0 h-0.5 bg-[#0077b6]"></span>
+						{/if}
+					</button>
 				{/each}
 			</div>
-			<select bind:value={filterType} class="text-sm border border-gray-200 rounded-lg px-2.5 py-1.5 bg-white text-gray-700 focus:outline-none focus:ring-1 focus:ring-[#0077b6]">
-				<option value="">All Types</option>
-				{#each types as t}<option value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</option>{/each}
-			</select>
-			<select bind:value={filterArea} class="text-sm border border-gray-200 rounded-lg px-2.5 py-1.5 bg-white text-gray-700 focus:outline-none focus:ring-1 focus:ring-[#0077b6]">
-				<option value="">All Areas</option>
-				{#each areas as a}<option value={a}>{a}</option>{/each}
-			</select>
-			<span class="text-gray-400 text-xs ml-auto">{filtered.length} listing{filtered.length !== 1 ? 's' : ''}</span>
+			<!-- Inputs -->
+			<div class="p-4 flex flex-wrap gap-3">
+				<div class="relative flex-1 min-w-[200px]">
+					<svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+					<input
+						type="text"
+						bind:value={searchQ}
+						onkeydown={(e) => e.key === 'Enter' && search()}
+						placeholder="Area, location or keyword..."
+						class="w-full pl-9 pr-3 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#0077b6]/30 focus:border-[#0077b6]"
+					/>
+				</div>
+				<select bind:value={searchType} class="border border-gray-200 rounded-xl px-3 py-3 text-sm text-gray-600 focus:outline-none focus:ring-2 focus:ring-[#0077b6]/30 bg-white">
+					<option value="">Property type</option>
+					{#each ['apartment','villa','house','penthouse','land','office'] as t}
+						<option value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</option>
+					{/each}
+				</select>
+				<select bind:value={searchBeds} class="border border-gray-200 rounded-xl px-3 py-3 text-sm text-gray-600 focus:outline-none focus:ring-2 focus:ring-[#0077b6]/30 bg-white">
+					<option value="">Min beds</option>
+					{#each ['1','2','3','4','5'] as b}
+						<option value={b}>{b}+ bed{+b > 1 ? 's' : ''}</option>
+					{/each}
+				</select>
+				<button onclick={search} class="btn-primary px-7 py-3 text-sm whitespace-nowrap">
+					Search Properties
+				</button>
+			</div>
 		</div>
 
-		{#if listings.length === 0}
-			<div class="text-center py-20 text-gray-400 border-2 border-dashed border-gray-200 rounded-2xl">
-				<div class="text-5xl mb-4">🏡</div>
-				<p class="text-lg font-medium text-gray-500">No listings yet</p>
-				<p class="text-sm mt-1">Save properties via the <a href="/admin" class="text-[#0077b6] hover:underline">admin dashboard</a> to feature them here.</p>
+		<!-- Stats -->
+		<div class="mt-8 flex justify-center flex-wrap gap-8">
+			<div class="text-center text-white">
+				<div class="text-3xl font-bold text-[#f4e4c1]" style="font-family:'Playfair Display',serif">500+</div>
+				<div class="text-white/60 text-xs mt-1">Families Relocated</div>
 			</div>
-		{:else}
-			<!-- Split layout: cards + map -->
-			<div class="flex gap-6 items-start">
-
-				<!-- Left: scrollable card list -->
-				<div class="flex-1 min-w-0">
-					{#if filtered.length === 0}
-						<div class="text-center py-16 text-gray-400">
-							<p>No listings match your filters.</p>
-							<button onclick={() => { tab='all'; filterType=''; filterArea=''; }} class="mt-3 text-[#0077b6] hover:underline text-sm">Clear filters</button>
-						</div>
-					{:else}
-						<div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
-							{#each filtered.slice(0, 12) as listing}
-								<a
-									href="/properties/{listing.id}"
-									onmouseenter={() => (activeId = listing.id)}
-									onmouseleave={() => (activeId = null)}
-									class="group bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 flex flex-col {activeId === listing.id ? 'ring-2 ring-[#0077b6]' : ''}"
-								>
-									<div class="relative h-48 bg-gray-100 overflow-hidden">
-										{#if listing.image}
-											<img src={listing.image} alt={listing.title} class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy" />
-										{:else}
-											<div class="w-full h-full flex items-center justify-center text-gray-300 text-sm">No image</div>
-										{/if}
-										<span class="absolute top-3 left-3 text-xs font-semibold px-2.5 py-1 rounded-full {listing.payment === 'rent' ? 'bg-[#2d6a4f] text-white' : 'bg-[#0077b6] text-white'}">
-											{listing.payment === 'rent' ? 'For Rent' : 'For Sale'}
-										</span>
-										{#if listing.property_type}
-											<span class="absolute top-3 right-3 text-xs font-medium px-2.5 py-1 rounded-full bg-black/40 text-white backdrop-blur-sm">{listing.property_type}</span>
-										{/if}
-									</div>
-									<div class="p-4 flex flex-col flex-1">
-										<h3 class="font-semibold text-gray-900 leading-snug mb-1 line-clamp-2 text-sm">{listing.title}</h3>
-										{#if listing.location}
-											<p class="text-gray-500 text-xs mb-2 flex items-center gap-1">
-												<svg class="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-												{listing.location}
-											</p>
-										{/if}
-										<p class="font-bold text-[#0077b6] mt-auto">{listing.price}</p>
-										{#if listing.bedrooms || listing.size}
-											<p class="text-gray-400 text-xs mt-0.5">{[listing.bedrooms, listing.size].filter(Boolean).join(' · ')}</p>
-										{/if}
-									</div>
-								</a>
-							{/each}
-						</div>
-						{#if filtered.length > 12}
-							<div class="text-center mt-8">
-								<a href="/properties" class="btn-outline px-8 py-3 inline-flex items-center gap-2">
-									View all {filtered.length} listings
-									<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
-								</a>
-							</div>
-						{/if}
-					{/if}
-				</div>
-
-				<!-- Right: sticky map -->
-				<div class="hidden lg:block w-[420px] xl:w-[480px] flex-shrink-0 sticky top-24" style="height: calc(100vh - 140px)">
-					<PropertyMap listings={mappable} bind:activeId />
-					{#if mappable.length < filtered.length}
-						<p class="text-xs text-gray-400 text-center mt-2">{mappable.length} of {filtered.length} listings mapped</p>
-					{/if}
-				</div>
-
+			<div class="text-center text-white">
+				<div class="text-3xl font-bold text-[#f4e4c1]" style="font-family:'Playfair Display',serif">15%</div>
+				<div class="text-white/60 text-xs mt-1">Flat Income Tax</div>
 			</div>
-		{/if}
+			<div class="text-center text-white">
+				<div class="text-3xl font-bold text-[#f4e4c1]" style="font-family:'Playfair Display',serif">12+</div>
+				<div class="text-white/60 text-xs mt-1">Years Local Expertise</div>
+			</div>
+		</div>
 	</div>
 </section>
-
 
 <!-- ===================== WHY MAURITIUS ===================== -->
 <section id="why-mauritius" class="py-20 bg-[#fdf6ec]">
