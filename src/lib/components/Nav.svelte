@@ -20,12 +20,12 @@
 	];
 
 	const CURRENCIES: { code: typeof locale.currency; label: string }[] = [
-		{ code: 'EUR', label: '€' },
-		{ code: 'USD', label: '$' },
-		{ code: 'GBP', label: '£' },
-		{ code: 'MUR', label: '₨' },
-		{ code: 'ZAR', label: 'R' },
-		{ code: 'RUB', label: '₽' },
+		{ code: 'EUR', label: '€ EUR' },
+		{ code: 'USD', label: '$ USD' },
+		{ code: 'GBP', label: '£ GBP' },
+		{ code: 'MUR', label: '₨ MUR' },
+		{ code: 'ZAR', label: 'R ZAR' },
+		{ code: 'RUB', label: '₽ RUB' },
 	];
 </script>
 
@@ -50,32 +50,22 @@
 				{/each}
 				<a href="/properties" class="btn-primary text-sm px-4 py-2">{ts('nav_browse')}</a>
 
-				<!-- Language switcher -->
-				<div class="flex items-center border border-gray-200 rounded-lg overflow-hidden text-xs">
-					{#each LANGS as l}
-						<button
-							onclick={() => setLang(l.code)}
-							class="px-2 py-1.5 font-semibold transition-colors"
-							class:bg-[#0077b6]={locale.lang === l.code}
-							class:text-white={locale.lang === l.code}
-							class:text-gray-500={locale.lang !== l.code}
-							class:hover:bg-gray-50={locale.lang !== l.code}
-						>{l.label}</button>
-					{/each}
-				</div>
-
-				<!-- Currency switcher -->
-				<div class="flex items-center border border-gray-200 rounded-lg overflow-hidden text-xs">
-					{#each CURRENCIES as c}
-						<button
-							onclick={() => setCurrency(c.code)}
-							class="px-2 py-1.5 font-semibold transition-colors"
-							class:bg-[#c9a96e]={locale.currency === c.code}
-							class:text-white={locale.currency === c.code}
-							class:text-gray-500={locale.currency !== c.code}
-							class:hover:bg-gray-50={locale.currency !== c.code}
-						>{c.label}</button>
-					{/each}
+				<!-- Compact lang + currency dropdowns -->
+				<div class="flex items-center gap-1.5">
+					<select
+						value={locale.lang}
+						onchange={(e) => setLang((e.target as HTMLSelectElement).value as typeof locale.lang)}
+						class="border border-gray-200 rounded-md px-1.5 py-1 text-xs font-medium text-gray-600 bg-white focus:outline-none focus:ring-1 focus:ring-[#0077b6] cursor-pointer"
+					>
+						{#each LANGS as l}<option value={l.code}>{l.label}</option>{/each}
+					</select>
+					<select
+						value={locale.currency}
+						onchange={(e) => setCurrency((e.target as HTMLSelectElement).value as typeof locale.currency)}
+						class="border border-gray-200 rounded-md px-1.5 py-1 text-xs font-medium text-gray-600 bg-white focus:outline-none focus:ring-1 focus:ring-[#c9a96e] cursor-pointer"
+					>
+						{#each CURRENCIES as c}<option value={c.code}>{c.label}</option>{/each}
+					</select>
 				</div>
 			</nav>
 
@@ -106,29 +96,21 @@
 			<a href="/#contact" class="mobile-nav-link" onclick={() => (mobileOpen = false)}>Contact</a>
 
 			<!-- Mobile lang/currency -->
-			<div class="pt-2 flex gap-3 flex-wrap">
-				<div class="flex items-center border border-gray-200 rounded-lg overflow-hidden text-xs">
-					{#each LANGS as l}
-						<button
-							onclick={() => setLang(l.code)}
-							class="px-2.5 py-1.5 font-semibold transition-colors"
-							class:bg-[#0077b6]={locale.lang === l.code}
-							class:text-white={locale.lang === l.code}
-							class:text-gray-500={locale.lang !== l.code}
-						>{l.label}</button>
-					{/each}
-				</div>
-				<div class="flex items-center border border-gray-200 rounded-lg overflow-hidden text-xs">
-					{#each CURRENCIES as c}
-						<button
-							onclick={() => setCurrency(c.code)}
-							class="px-2.5 py-1.5 font-semibold transition-colors"
-							class:bg-[#c9a96e]={locale.currency === c.code}
-							class:text-white={locale.currency === c.code}
-							class:text-gray-500={locale.currency !== c.code}
-						>{c.label}</button>
-					{/each}
-				</div>
+			<div class="pt-2 flex gap-2">
+				<select
+					value={locale.lang}
+					onchange={(e) => setLang((e.target as HTMLSelectElement).value as typeof locale.lang)}
+					class="border border-gray-200 rounded-md px-2 py-1.5 text-sm text-gray-600 bg-white focus:outline-none"
+				>
+					{#each LANGS as l}<option value={l.code}>{l.label}</option>{/each}
+				</select>
+				<select
+					value={locale.currency}
+					onchange={(e) => setCurrency((e.target as HTMLSelectElement).value as typeof locale.currency)}
+					class="border border-gray-200 rounded-md px-2 py-1.5 text-sm text-gray-600 bg-white focus:outline-none"
+				>
+					{#each CURRENCIES as c}<option value={c.code}>{c.label}</option>{/each}
+				</select>
 			</div>
 		</div>
 	{/if}
