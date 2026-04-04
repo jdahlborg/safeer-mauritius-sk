@@ -1,14 +1,31 @@
 <script lang="ts">
-	import { page } from '$app/stores';
+	import { locale, setLang, setCurrency } from '$lib/locale.svelte';
+	import { ts } from '$lib/i18n';
 
 	let mobileOpen = $state(false);
 
-	const links = [
-		{ href: '/properties', label: 'Properties' },
-		{ href: '/#services', label: 'Services' },
-		{ href: '/#why-mauritius', label: 'Why Mauritius' },
-		{ href: '/#faq', label: 'FAQ' },
-		{ href: '/partners', label: 'For Partners' },
+	const links = $derived([
+		{ href: '/properties', label: ts('nav_properties') },
+		{ href: '/#services', label: ts('nav_services') },
+		{ href: '/#why-mauritius', label: ts('nav_why') },
+		{ href: '/#faq', label: ts('nav_faq') },
+		{ href: '/partners', label: ts('nav_partners') },
+	]);
+
+	const LANGS: { code: typeof locale.lang; label: string }[] = [
+		{ code: 'en', label: 'EN' },
+		{ code: 'fr', label: 'FR' },
+		{ code: 'cr', label: 'CR' },
+		{ code: 'ru', label: 'RU' },
+	];
+
+	const CURRENCIES: { code: typeof locale.currency; label: string }[] = [
+		{ code: 'EUR', label: '€' },
+		{ code: 'USD', label: '$' },
+		{ code: 'GBP', label: '£' },
+		{ code: 'MUR', label: '₨' },
+		{ code: 'ZAR', label: 'R' },
+		{ code: 'RUB', label: '₽' },
 	];
 </script>
 
@@ -27,11 +44,39 @@
 			</a>
 
 			<!-- Desktop Nav -->
-			<nav class="hidden lg:flex items-center gap-8">
+			<nav class="hidden lg:flex items-center gap-6">
 				{#each links as link}
 					<a href={link.href} class="nav-link">{link.label}</a>
 				{/each}
-				<a href="/properties" class="btn-primary text-sm px-5 py-2.5">Browse Properties</a>
+				<a href="/properties" class="btn-primary text-sm px-4 py-2">{ts('nav_browse')}</a>
+
+				<!-- Language switcher -->
+				<div class="flex items-center border border-gray-200 rounded-lg overflow-hidden text-xs">
+					{#each LANGS as l}
+						<button
+							onclick={() => setLang(l.code)}
+							class="px-2 py-1.5 font-semibold transition-colors"
+							class:bg-[#0077b6]={locale.lang === l.code}
+							class:text-white={locale.lang === l.code}
+							class:text-gray-500={locale.lang !== l.code}
+							class:hover:bg-gray-50={locale.lang !== l.code}
+						>{l.label}</button>
+					{/each}
+				</div>
+
+				<!-- Currency switcher -->
+				<div class="flex items-center border border-gray-200 rounded-lg overflow-hidden text-xs">
+					{#each CURRENCIES as c}
+						<button
+							onclick={() => setCurrency(c.code)}
+							class="px-2 py-1.5 font-semibold transition-colors"
+							class:bg-[#c9a96e]={locale.currency === c.code}
+							class:text-white={locale.currency === c.code}
+							class:text-gray-500={locale.currency !== c.code}
+							class:hover:bg-gray-50={locale.currency !== c.code}
+						>{c.label}</button>
+					{/each}
+				</div>
 			</nav>
 
 			<!-- Hamburger -->
@@ -59,6 +104,32 @@
 				<a href={link.href} class="mobile-nav-link" onclick={() => (mobileOpen = false)}>{link.label}</a>
 			{/each}
 			<a href="/#contact" class="mobile-nav-link" onclick={() => (mobileOpen = false)}>Contact</a>
+
+			<!-- Mobile lang/currency -->
+			<div class="pt-2 flex gap-3 flex-wrap">
+				<div class="flex items-center border border-gray-200 rounded-lg overflow-hidden text-xs">
+					{#each LANGS as l}
+						<button
+							onclick={() => setLang(l.code)}
+							class="px-2.5 py-1.5 font-semibold transition-colors"
+							class:bg-[#0077b6]={locale.lang === l.code}
+							class:text-white={locale.lang === l.code}
+							class:text-gray-500={locale.lang !== l.code}
+						>{l.label}</button>
+					{/each}
+				</div>
+				<div class="flex items-center border border-gray-200 rounded-lg overflow-hidden text-xs">
+					{#each CURRENCIES as c}
+						<button
+							onclick={() => setCurrency(c.code)}
+							class="px-2.5 py-1.5 font-semibold transition-colors"
+							class:bg-[#c9a96e]={locale.currency === c.code}
+							class:text-white={locale.currency === c.code}
+							class:text-gray-500={locale.currency !== c.code}
+						>{c.label}</button>
+					{/each}
+				</div>
+			</div>
 		</div>
 	{/if}
 </header>

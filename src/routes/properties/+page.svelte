@@ -3,6 +3,8 @@
 	import PropertyMap from '$lib/components/PropertyMap.svelte';
 	import { page } from '$app/state';
 	import { REGION_NAMES, getRegion, getRegionFromLocation, type Region } from '$lib/regions';
+	import { ts, tn } from '$lib/i18n';
+	import { formatPrice } from '$lib/currency';
 
 	let { data }: { data: PageData } = $props();
 
@@ -71,7 +73,7 @@
 
 		<!-- Buy / Rent toggle -->
 		<div class="flex rounded-lg border border-gray-200 overflow-hidden text-sm">
-			{#each [['all','All'], ['buy','For Sale'], ['rent','To Rent']] as [val, label]}
+			{#each [['all', ts('filter_all')], ['buy', ts('filter_for_sale')], ['rent', ts('filter_to_rent')]] as [val, label]}
 				<button
 					onclick={() => (tab = val as typeof tab)}
 					class="px-3 py-1.5 font-medium transition-colors"
@@ -89,21 +91,21 @@
 			<input
 				type="search"
 				bind:value={filterQ}
-				placeholder="Search by area or keyword..."
+				placeholder={ts('filter_search_placeholder')}
 				class="pl-8 pr-3 py-1.5 text-sm border border-gray-200 rounded-lg w-56 focus:outline-none focus:ring-1 focus:ring-[#0077b6] focus:border-[#0077b6]"
 			/>
 		</div>
 
 		<!-- Type -->
 		<select bind:value={filterType} class="text-sm border border-gray-200 rounded-lg px-2.5 py-1.5 bg-white text-gray-700 focus:outline-none focus:ring-1 focus:ring-[#0077b6]">
-			<option value="">All Types</option>
+			<option value="">{ts('filter_all_types')}</option>
 			{#each types as t}<option value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</option>{/each}
 		</select>
 
 
 		<!-- Min beds -->
 		<select bind:value={filterMinBeds} class="text-sm border border-gray-200 rounded-lg px-2.5 py-1.5 bg-white text-gray-700 focus:outline-none focus:ring-1 focus:ring-[#0077b6]">
-			<option value="">Min beds</option>
+			<option value="">{ts('search_min_beds')}</option>
 			{#each ['1','2','3','4','5'] as b}<option value={b}>{b}+</option>{/each}
 		</select>
 
@@ -132,14 +134,14 @@
 		<!-- Scheme -->
 		{#if schemes.length > 0}
 			<select bind:value={filterScheme} class="text-sm border border-gray-200 rounded-lg px-2.5 py-1.5 bg-white text-gray-700 focus:outline-none focus:ring-1 focus:ring-[#0077b6]">
-				<option value="">All Schemes</option>
+				<option value="">{ts('filter_all_schemes')}</option>
 				{#each schemes as s}<option value={s}>{s}</option>{/each}
 			</select>
 		{/if}
 
-		<span class="text-gray-400 text-xs ml-auto">{filtered.length} listing{filtered.length !== 1 ? 's' : ''}</span>
+		<span class="text-gray-400 text-xs ml-auto">{tn('filter_listings', filtered.length)}</span>
 		{#if filterQ || filterType || filterScheme || filterMinBeds || tab !== 'all' || filterRegion}
-			<button onclick={clearFilters} class="text-xs text-[#0077b6] hover:underline">Clear</button>
+			<button onclick={clearFilters} class="text-xs text-[#0077b6] hover:underline">{ts('filter_clear')}</button>
 		{/if}
 	</div>
 </section>
@@ -151,8 +153,8 @@
 	<div class="flex-1 min-w-0 overflow-y-auto px-4 sm:px-6 lg:px-8 py-6">
 		{#if filtered.length === 0}
 			<div class="text-center py-20 text-gray-400">
-				<p class="text-lg font-medium">No listings match your filters.</p>
-				<button onclick={clearFilters} class="mt-4 text-[#0077b6] hover:underline text-sm">Clear filters</button>
+				<p class="text-lg font-medium">{ts('no_listings')}</p>
+				<button onclick={clearFilters} class="mt-4 text-[#0077b6] hover:underline text-sm">{ts('clear_filters')}</button>
 			</div>
 		{:else}
 			<div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
@@ -173,7 +175,7 @@
 							{/if}
 							<div class="absolute top-3 left-3 flex gap-1">
 								<span class="text-xs font-semibold px-2 py-1 rounded-full {l.payment === 'rent' ? 'bg-[#2d6a4f] text-white' : 'bg-[#0077b6] text-white'}">
-									{l.payment === 'rent' ? 'For Rent' : 'For Sale'}
+									{l.payment === 'rent' ? ts('card_for_rent') : ts('card_for_sale')}
 								</span>
 								{#if l.scheme}
 									<span class="text-xs font-semibold px-2 py-1 rounded-full bg-[#c9a96e] text-white">{l.scheme}</span>
@@ -197,7 +199,7 @@
 								</div>
 							{/if}
 							<div class="mt-auto">
-								<p class="font-bold text-[#0077b6] text-sm">{l.price}</p>
+								<p class="font-bold text-[#0077b6] text-sm">{formatPrice(l.price)}</p>
 								{#if l.bedrooms || l.size}
 									<p class="text-gray-400 text-xs mt-0.5">{[l.bedrooms, l.size].filter(Boolean).join(' · ')}</p>
 								{/if}

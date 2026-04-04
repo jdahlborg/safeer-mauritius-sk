@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { PageData } from './$types';
 	import { goto } from '$app/navigation';
+	import { ts } from '$lib/i18n';
 
 	let { data }: { data: PageData } = $props();
 
@@ -101,7 +102,7 @@
 		<div class="bg-white rounded-2xl shadow-2xl overflow-hidden">
 			<!-- Buy / Rent tabs -->
 			<div class="flex border-b border-gray-100">
-				{#each [['buy', 'For Sale'], ['rent', 'To Rent']] as [val, label]}
+				{#each [['buy', ts('search_buy')], ['rent', ts('search_rent')]] as [val, label]}
 					<button
 						onclick={() => (payment = val)}
 						class="flex-1 py-3.5 text-sm font-semibold transition-colors relative"
@@ -125,24 +126,24 @@
 						type="text"
 						bind:value={searchQ}
 						onkeydown={(e) => e.key === 'Enter' && search()}
-						placeholder="Area, location or keyword..."
+						placeholder={ts('search_placeholder')}
 						class="w-full pl-9 pr-3 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#0077b6]/30 focus:border-[#0077b6]"
 					/>
 				</div>
 				<select bind:value={searchType} class="border border-gray-200 rounded-xl px-3 py-3 text-sm text-gray-600 focus:outline-none focus:ring-2 focus:ring-[#0077b6]/30 bg-white">
-					<option value="">Property type</option>
+					<option value="">{ts('search_all_types')}</option>
 					{#each ['apartment','villa','house','penthouse','land','office'] as t}
 						<option value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</option>
 					{/each}
 				</select>
 				<select bind:value={searchBeds} class="border border-gray-200 rounded-xl px-3 py-3 text-sm text-gray-600 focus:outline-none focus:ring-2 focus:ring-[#0077b6]/30 bg-white">
-					<option value="">Min beds</option>
+					<option value="">{ts('search_min_beds')}</option>
 					{#each ['1','2','3','4','5'] as b}
-						<option value={b}>{b}+ bed{+b > 1 ? 's' : ''}</option>
+						<option value={b}>{b}+</option>
 					{/each}
 				</select>
 				<button onclick={search} class="btn-primary px-7 py-3 text-sm whitespace-nowrap">
-					Search Properties
+					{ts('search_button')}
 				</button>
 			</div>
 		</div>
