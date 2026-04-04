@@ -1,5 +1,5 @@
 import { json } from '@sveltejs/kit';
-import { deleteListing, updateNotes } from '$lib/server/db';
+import { deleteListing, updateNotes, updateListingScheme } from '$lib/server/db';
 import type { RequestHandler } from './$types';
 
 export const DELETE: RequestHandler = async ({ params }) => {
@@ -8,7 +8,9 @@ export const DELETE: RequestHandler = async ({ params }) => {
 };
 
 export const PATCH: RequestHandler = async ({ params, request }) => {
-	const { notes } = await request.json();
-	const ok = await updateNotes(parseInt(params.id), notes ?? '');
-	return json({ ok });
+	const id = parseInt(params.id);
+	const body = await request.json();
+	if (body.notes !== undefined) await updateNotes(id, body.notes ?? '');
+	if (body.scheme !== undefined) await updateListingScheme(id, body.scheme ?? '');
+	return json({ ok: true });
 };

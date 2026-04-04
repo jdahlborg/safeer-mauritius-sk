@@ -8,6 +8,7 @@ export interface Listing {
 	size: string;
 	image: string;
 	images: string[];
+	scheme: string;
 	agency: string;
 	payment: string;
 	property_type: string;

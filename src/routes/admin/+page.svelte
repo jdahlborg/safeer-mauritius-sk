@@ -110,6 +110,16 @@
 		});
 	}
 
+	// ── Update scheme ──────────────────────────────────────
+	async function updateScheme(id: number, scheme: string) {
+		await fetch(`/api/listings/${id}`, {
+			method: 'PATCH',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ scheme })
+		});
+		savedListings = savedListings.map(l => l.id === id ? { ...l, scheme } : l);
+	}
+
 	function showToast(msg: string) {
 		toast = msg;
 		setTimeout(() => (toast = ''), 3000);
@@ -351,6 +361,16 @@
 								{#if listing.source && listing.source !== "lexpress"}
 									<span class="text-xs text-gray-400 mb-2 block">{SOURCES.find(s => s.id === listing.source)?.name ?? listing.source}</span>
 								{/if}
+								<select
+									class="form-input text-xs py-1.5 mb-2"
+									value={listing.scheme ?? ''}
+									onchange={(e) => updateScheme(listing.id, (e.target as HTMLSelectElement).value)}
+								>
+									<option value="">No scheme</option>
+									{#each ['PDS','IRS','RES','G+2','Smart City'] as s}
+										<option value={s}>{s}</option>
+									{/each}
+								</select>
 								<textarea
 									class="form-input text-xs resize-none mb-2 py-2"
 									rows="2"

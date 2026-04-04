@@ -20,6 +20,7 @@ export async function initDb() {
 			url           TEXT UNIQUE,
 			image         TEXT,
 			images        TEXT DEFAULT '[]',
+			scheme        TEXT DEFAULT '',
 			payment       TEXT,
 			property_type TEXT,
 			agency        TEXT,
@@ -30,6 +31,7 @@ export async function initDb() {
 	`;
 	await sql`ALTER TABLE saved_listings ADD COLUMN IF NOT EXISTS source TEXT DEFAULT 'lexpress'`;
 	await sql`ALTER TABLE saved_listings ADD COLUMN IF NOT EXISTS images TEXT DEFAULT '[]'`;
+	await sql`ALTER TABLE saved_listings ADD COLUMN IF NOT EXISTS scheme TEXT DEFAULT ''`;
 	await sql.end();
 }
 
@@ -44,6 +46,7 @@ export interface SavedListing {
 	url: string;
 	image: string;
 	images: string[];
+	scheme: string;
 	payment: string;
 	property_type: string;
 	agency: string;
@@ -71,7 +74,7 @@ export async function saveListing(
 	try {
 		const rows = await sql`
 			INSERT INTO saved_listings
-				(title, price, location, bedrooms, size, features, url, image, images, payment, property_type, agency, source, notes)
+				(title, price, location, bedrooms, size, features, url, image, images, scheme, payment, property_type, agency, source, notes)
 			VALUES (
 				${String(data.title ?? '')},
 				${String(data.price ?? '')},
@@ -82,6 +85,7 @@ export async function saveListing(
 				${String(data.url ?? '')},
 				${String(data.image ?? '')},
 				${JSON.stringify(data.images ?? [])},
+				${String(data.scheme ?? '')},
 				${String(data.payment ?? '')},
 				${String(data.property_type ?? '')},
 				${String(data.agency ?? '')},
@@ -134,6 +138,16 @@ export async function deleteListing(id: number): Promise<boolean> {
 	const sql = getClient();
 	try {
 		const result = await sql`DELETE FROM saved_listings WHERE id = ${id}`;
+		return result.count > 0;
+	} finally {
+		await sql.end();
+	}
+}
+
+export async function updateListingScheme(id: number, scheme: string): Promise<boolean> {
+	const sql = getClient();
+	try {
+		const result = await sql`UPDATE saved_listings SET scheme = ${scheme} WHERE id = ${id}`;
 		return result.count > 0;
 	} finally {
 		await sql.end();

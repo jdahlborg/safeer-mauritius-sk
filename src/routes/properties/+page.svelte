@@ -6,17 +6,20 @@
 	let tab = $state<'all' | 'buy' | 'rent'>('all');
 	let filterType = $state('');
 	let filterArea = $state('');
+	let filterScheme = $state('');
 
 	const listings = data.listings;
 
 	const areas = [...new Set(listings.map(l => l.location.split(',')[1]?.trim()).filter(Boolean))].sort();
 	const types = [...new Set(listings.map(l => l.property_type).filter(Boolean))].sort();
+	const schemes = [...new Set(listings.map(l => l.scheme).filter(Boolean))].sort();
 
 	const filtered = $derived(
 		listings.filter(l => {
 			if (tab !== 'all' && l.payment !== tab) return false;
 			if (filterType && l.property_type !== filterType) return false;
 			if (filterArea && !l.location.includes(filterArea)) return false;
+			if (filterScheme && l.scheme !== filterScheme) return false;
 			return true;
 		})
 	);
@@ -65,6 +68,13 @@
 			{#each areas as a}<option value={a}>{a}</option>{/each}
 		</select>
 
+		{#if schemes.length > 0}
+			<select bind:value={filterScheme} class="text-sm border border-gray-200 rounded-lg px-2.5 py-1.5 bg-white text-gray-700 focus:outline-none focus:ring-1 focus:ring-[#0077b6]">
+				<option value="">All Schemes</option>
+				{#each schemes as s}<option value={s}>{s}</option>{/each}
+			</select>
+		{/if}
+
 		<span class="text-gray-400 text-xs ml-auto">{filtered.length} listings</span>
 	</div>
 </section>
@@ -89,10 +99,13 @@
 									<svg class="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
 								</div>
 							{/if}
-							<div class="absolute top-3 left-3">
+							<div class="absolute top-3 left-3 flex gap-1">
 								<span class="text-xs font-semibold px-2 py-1 rounded-full {l.payment === 'rent' ? 'bg-[#2d6a4f] text-white' : 'bg-[#0077b6] text-white'}">
 									{l.payment === 'rent' ? 'For Rent' : 'For Sale'}
 								</span>
+								{#if l.scheme}
+									<span class="text-xs font-semibold px-2 py-1 rounded-full bg-[#c9a96e] text-white">{l.scheme}</span>
+								{/if}
 							</div>
 						</div>
 						<div class="p-4 flex flex-col flex-1">

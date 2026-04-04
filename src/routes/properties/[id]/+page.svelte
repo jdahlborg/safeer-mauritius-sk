@@ -13,6 +13,14 @@
 	const sourceName = SOURCE_NAMES[l.source] ?? l.source;
 	const savedDate = new Date(l.saved_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
 
+	const SCHEME_COLORS: Record<string, string> = {
+		PDS: 'bg-[#0077b6] text-white',
+		IRS: 'bg-[#2d6a4f] text-white',
+		RES: 'bg-[#c9a96e] text-white',
+		'G+2': 'bg-purple-600 text-white',
+		'Smart City': 'bg-teal-600 text-white',
+	};
+
 	// Build deduplicated image list: images[] first, fallback to image
 	const allImages = $derived.by(() => {
 		const imgs: string[] = [];
@@ -87,6 +95,9 @@
 							</span>
 							{#if l.property_type}
 								<span class="text-xs font-semibold px-3 py-1.5 rounded-full bg-black/50 text-white shadow">{l.property_type}</span>
+							{/if}
+							{#if l.scheme}
+								<span class="text-xs font-semibold px-3 py-1.5 rounded-full shadow {SCHEME_COLORS[l.scheme] ?? 'bg-gray-700 text-white'}">{l.scheme}</span>
 							{/if}
 						</div>
 					</div>
@@ -183,6 +194,17 @@
 								<div class="font-semibold text-gray-900 text-sm">{sourceName}</div>
 							</div>
 						</div>
+						{#if l.scheme}
+							<div class="flex items-center gap-3">
+								<div class="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 {SCHEME_COLORS[l.scheme] ?? 'bg-gray-100 text-gray-600'}">
+									<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+								</div>
+								<div>
+									<div class="text-xs text-gray-400">Scheme</div>
+									<div class="font-semibold text-gray-900 text-sm">{l.scheme}</div>
+								</div>
+							</div>
+						{/if}
 					</div>
 				</div>
 
