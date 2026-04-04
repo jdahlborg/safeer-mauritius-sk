@@ -65,9 +65,12 @@
 	<meta name="description" content="Browse properties for sale and rent in Mauritius. Curated listings from trusted local agents." />
 </svelte:head>
 
+<!-- pt-20 pushes all content below the fixed nav -->
+<div class="pt-20">
+
 <!-- Filters bar (sticky) -->
 <section class="bg-white border-b border-gray-200 sticky top-20 z-30 shadow-sm">
-	<div class="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 py-3 flex flex-wrap items-center gap-2">
+	<div class="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center gap-2 overflow-x-auto scrollbar-hide min-w-0">
 
 		<!-- Buy / Rent toggle -->
 		<div class="flex rounded-lg border border-gray-200 overflow-hidden text-sm">
@@ -149,11 +152,11 @@
 	</div>
 </section>
 
-<!-- Main content: cards + map -->
-<div class="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 py-6 flex gap-6 items-start">
+<!-- Main content: fixed viewport height so left panel scrolls independently -->
+<div class="flex" style="height: calc(100vh - 132px)">
 
-	<!-- Left: listing cards -->
-	<div class="flex-1 min-w-0">
+	<!-- Left: scrollable cards panel -->
+	<div class="flex-1 min-w-0 overflow-y-auto px-4 sm:px-6 lg:px-8 py-6">
 		{#if filtered.length === 0}
 			<div class="text-center py-20 text-gray-400">
 				<p class="text-lg font-medium">No listings match your filters.</p>
@@ -217,15 +220,19 @@
 		{/if}
 	</div>
 
-	<!-- Right: sticky map -->
-	<div class="hidden lg:block w-[420px] xl:w-[480px] flex-shrink-0 sticky top-[140px]" style="height: calc(100vh - 160px)">
-		<PropertyMap listings={mappable} bind:activeId bind:activeRegion />
+	<!-- Right: map panel (fills height naturally) -->
+	<div class="hidden lg:flex lg:flex-col w-[420px] xl:w-[500px] flex-shrink-0 p-4">
+		<div class="flex-1 min-h-0">
+			<PropertyMap listings={mappable} bind:activeId bind:activeRegion />
+		</div>
 		{#if mappable.length < filtered.length}
-			<p class="text-xs text-gray-400 text-center mt-2">{mappable.length} of {filtered.length} listings mapped — <a href="/admin" class="text-[#0077b6] hover:underline">geocode more</a></p>
+			<p class="text-xs text-gray-400 text-center mt-2 flex-shrink-0">{mappable.length} of {filtered.length} listings mapped — <a href="/admin" class="text-[#0077b6] hover:underline">geocode more</a></p>
 		{/if}
 	</div>
 
 </div>
+
+</div><!-- end pt-20 wrapper -->
 
 <!-- PDS/IRS/RES Info -->
 <section class="py-16 bg-white border-t border-gray-100">

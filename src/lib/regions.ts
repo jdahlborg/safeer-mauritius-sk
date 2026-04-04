@@ -1,3 +1,16 @@
+/** Maps each Mauritius district to one of the 5 regions */
+export const DISTRICT_REGION: Record<string, Region> = {
+	'Pamplemousses':    'North',
+	'Riviere du Rempart': 'North',
+	'Port Louis':       'Center',
+	'Moka':             'Center',
+	'Plaines Wilhems':  'Center',
+	'Black River':      'West',
+	'Savanne':          'South',
+	'Grand Port':       'South',
+	'Flacq':            'East',
+};
+
 export const REGIONS = {
 	North: {
 		bounds: [[-20.15, 57.29], [-19.98, 57.82]] as [[number, number], [number, number]],
