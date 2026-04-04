@@ -1,10 +1,32 @@
 <script lang="ts">
 	import type { PageData } from './$types';
+	import PropertyMap from '$lib/components/PropertyMap.svelte';
 
 	let { data }: { data: PageData } = $props();
 
 	let toast = $state(false);
 	let submitting = $state(false);
+
+	// ── Property filters ──────────────────────────────────
+	let tab = $state<'all' | 'buy' | 'rent'>('all');
+	let filterType = $state('');
+	let filterArea = $state('');
+	let activeId = $state<number | null>(null);
+
+	const listings = data.listings;
+	const areas = [...new Set(listings.map((l: typeof listings[0]) => l.location.split(',')[1]?.trim()).filter(Boolean))].sort();
+	const types = [...new Set(listings.map((l: typeof listings[0]) => l.property_type).filter(Boolean))].sort();
+
+	const filtered = $derived(
+		listings.filter((l: typeof listings[0]) => {
+			if (tab !== 'all' && l.payment !== tab) return false;
+			if (filterType && l.property_type !== filterType) return false;
+			if (filterArea && !l.location.includes(filterArea)) return false;
+			return true;
+		})
+	);
+
+	const mappable = $derived(filtered.filter((l: typeof listings[0]) => l.lat != null && l.lng != null));
 
 	const faqs = [
 		{
@@ -109,11 +131,13 @@
 
 <!-- ===================== FEATURED PROPERTIES ===================== -->
 <section id="properties" class="py-20 bg-white">
-	<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-		<div class="flex items-end justify-between mb-10">
+	<div class="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8">
+
+		<!-- Header -->
+		<div class="flex items-end justify-between mb-6">
 			<div>
 				<span class="section-tag">Listings</span>
-				<h2 class="section-title mt-2">Featured Properties</h2>
+				<h2 class="section-title mt-2">Properties in Mauritius</h2>
 			</div>
 			<a href="/properties" class="hidden sm:inline-flex items-center gap-2 text-[#0077b6] font-medium text-sm hover:underline">
 				View all listings
@@ -121,57 +145,105 @@
 			</a>
 		</div>
 
-		{#if data.featured.length === 0}
+		<!-- Filters -->
+		<div class="flex flex-wrap items-center gap-2 mb-6">
+			<div class="flex rounded-lg border border-gray-200 overflow-hidden text-sm">
+				{#each [['all','All'], ['buy','For Sale'], ['rent','For Rent']] as [val, label]}
+					<button
+						onclick={() => (tab = val as typeof tab)}
+						class="px-3 py-1.5 font-medium transition-colors"
+						class:bg-[#0077b6]={tab === val}
+						class:text-white={tab === val}
+						class:text-gray-600={tab !== val}
+						class:hover:bg-gray-50={tab !== val}
+					>{label}</button>
+				{/each}
+			</div>
+			<select bind:value={filterType} class="text-sm border border-gray-200 rounded-lg px-2.5 py-1.5 bg-white text-gray-700 focus:outline-none focus:ring-1 focus:ring-[#0077b6]">
+				<option value="">All Types</option>
+				{#each types as t}<option value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</option>{/each}
+			</select>
+			<select bind:value={filterArea} class="text-sm border border-gray-200 rounded-lg px-2.5 py-1.5 bg-white text-gray-700 focus:outline-none focus:ring-1 focus:ring-[#0077b6]">
+				<option value="">All Areas</option>
+				{#each areas as a}<option value={a}>{a}</option>{/each}
+			</select>
+			<span class="text-gray-400 text-xs ml-auto">{filtered.length} listing{filtered.length !== 1 ? 's' : ''}</span>
+		</div>
+
+		{#if listings.length === 0}
 			<div class="text-center py-20 text-gray-400 border-2 border-dashed border-gray-200 rounded-2xl">
 				<div class="text-5xl mb-4">🏡</div>
 				<p class="text-lg font-medium text-gray-500">No listings yet</p>
 				<p class="text-sm mt-1">Save properties via the <a href="/admin" class="text-[#0077b6] hover:underline">admin dashboard</a> to feature them here.</p>
 			</div>
 		{:else}
-			<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-				{#each data.featured as listing}
-					<a href="/properties/{listing.id}" class="group bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 flex flex-col">
-						<div class="relative h-52 bg-gray-100 overflow-hidden">
-							{#if listing.image}
-								<img src={listing.image} alt={listing.title} class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy" />
-							{:else}
-								<div class="w-full h-full flex items-center justify-center text-gray-300 text-sm">No image</div>
-							{/if}
-							<span class="absolute top-3 left-3 text-xs font-semibold px-2.5 py-1 rounded-full {listing.payment === 'rent' ? 'bg-[#2d6a4f] text-white' : 'bg-[#0077b6] text-white'}">
-								{listing.payment === 'rent' ? 'For Rent' : 'For Sale'}
-							</span>
-							{#if listing.property_type}
-								<span class="absolute top-3 right-3 text-xs font-medium px-2.5 py-1 rounded-full bg-black/40 text-white backdrop-blur-sm">{listing.property_type}</span>
-							{/if}
+			<!-- Split layout: cards + map -->
+			<div class="flex gap-6 items-start">
+
+				<!-- Left: scrollable card list -->
+				<div class="flex-1 min-w-0">
+					{#if filtered.length === 0}
+						<div class="text-center py-16 text-gray-400">
+							<p>No listings match your filters.</p>
+							<button onclick={() => { tab='all'; filterType=''; filterArea=''; }} class="mt-3 text-[#0077b6] hover:underline text-sm">Clear filters</button>
 						</div>
-						<div class="p-5 flex flex-col flex-1">
-							<h3 class="font-semibold text-gray-900 leading-snug mb-1 line-clamp-2">{listing.title}</h3>
-							{#if listing.location}
-								<p class="text-gray-500 text-sm mb-3 flex items-center gap-1">
-									<svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-									{listing.location}
-								</p>
-							{/if}
-							{#if listing.features?.length}
-								<div class="flex flex-wrap gap-1.5 mb-3">
-									{#each listing.features.slice(0, 3) as f}
-										<span class="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">{f}</span>
-									{/each}
-								</div>
-							{/if}
-							<p class="font-bold text-[#0077b6] text-lg mt-auto">{listing.price}</p>
-							{#if listing.bedrooms || listing.size}
-								<p class="text-gray-400 text-xs mt-1">{[listing.bedrooms, listing.size].filter(Boolean).join(' · ')}</p>
-							{/if}
+					{:else}
+						<div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
+							{#each filtered.slice(0, 12) as listing}
+								<a
+									href="/properties/{listing.id}"
+									onmouseenter={() => (activeId = listing.id)}
+									onmouseleave={() => (activeId = null)}
+									class="group bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 flex flex-col {activeId === listing.id ? 'ring-2 ring-[#0077b6]' : ''}"
+								>
+									<div class="relative h-48 bg-gray-100 overflow-hidden">
+										{#if listing.image}
+											<img src={listing.image} alt={listing.title} class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy" />
+										{:else}
+											<div class="w-full h-full flex items-center justify-center text-gray-300 text-sm">No image</div>
+										{/if}
+										<span class="absolute top-3 left-3 text-xs font-semibold px-2.5 py-1 rounded-full {listing.payment === 'rent' ? 'bg-[#2d6a4f] text-white' : 'bg-[#0077b6] text-white'}">
+											{listing.payment === 'rent' ? 'For Rent' : 'For Sale'}
+										</span>
+										{#if listing.property_type}
+											<span class="absolute top-3 right-3 text-xs font-medium px-2.5 py-1 rounded-full bg-black/40 text-white backdrop-blur-sm">{listing.property_type}</span>
+										{/if}
+									</div>
+									<div class="p-4 flex flex-col flex-1">
+										<h3 class="font-semibold text-gray-900 leading-snug mb-1 line-clamp-2 text-sm">{listing.title}</h3>
+										{#if listing.location}
+											<p class="text-gray-500 text-xs mb-2 flex items-center gap-1">
+												<svg class="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+												{listing.location}
+											</p>
+										{/if}
+										<p class="font-bold text-[#0077b6] mt-auto">{listing.price}</p>
+										{#if listing.bedrooms || listing.size}
+											<p class="text-gray-400 text-xs mt-0.5">{[listing.bedrooms, listing.size].filter(Boolean).join(' · ')}</p>
+										{/if}
+									</div>
+								</a>
+							{/each}
 						</div>
-					</a>
-				{/each}
-			</div>
-			<div class="text-center mt-10">
-				<a href="/properties" class="btn-outline px-8 py-3 inline-flex items-center gap-2">
-					View All Properties
-					<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
-				</a>
+						{#if filtered.length > 12}
+							<div class="text-center mt-8">
+								<a href="/properties" class="btn-outline px-8 py-3 inline-flex items-center gap-2">
+									View all {filtered.length} listings
+									<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
+								</a>
+							</div>
+						{/if}
+					{/if}
+				</div>
+
+				<!-- Right: sticky map -->
+				<div class="hidden lg:block w-[420px] xl:w-[480px] flex-shrink-0 sticky top-24" style="height: calc(100vh - 140px)">
+					<PropertyMap listings={mappable} bind:activeId />
+					{#if mappable.length < filtered.length}
+						<p class="text-xs text-gray-400 text-center mt-2">{mappable.length} of {filtered.length} listings mapped</p>
+					{/if}
+				</div>
+
 			</div>
 		{/if}
 	</div>

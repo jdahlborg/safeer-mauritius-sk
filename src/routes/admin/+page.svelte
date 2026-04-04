@@ -120,6 +120,23 @@
 		savedListings = savedListings.map(l => l.id === id ? { ...l, scheme } : l);
 	}
 
+	async function updateYearBuilt(id: number, year_built: string) {
+		await fetch(`/api/listings/${id}`, {
+			method: 'PATCH',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ year_built })
+		});
+		savedListings = savedListings.map(l => l.id === id ? { ...l, year_built } : l);
+	}
+
+	async function geocodeAll() {
+		showToast('Geocoding... this may take a few minutes');
+		const r = await fetch('/api/geocode', { method: 'POST' });
+		const d = await r.json();
+		showToast(`Geocoded ${d.updated} of ${d.total} listings`);
+		loadSaved();
+	}
+
 	function showToast(msg: string) {
 		toast = msg;
 		setTimeout(() => (toast = ''), 3000);
@@ -145,6 +162,7 @@
 				<p class="text-gray-500 text-sm mt-1">Scrape Mauritius property portals and manage saved listings</p>
 			</div>
 			<div class="flex gap-3">
+				<button onclick={geocodeAll} class="btn-outline text-sm px-4 py-2">Geocode All</button>
 				<a href="/api/export/json" class="btn-outline text-sm px-4 py-2">Export JSON</a>
 				<a href="/api/export/csv" class="btn-outline text-sm px-4 py-2">Export CSV</a>
 			</div>

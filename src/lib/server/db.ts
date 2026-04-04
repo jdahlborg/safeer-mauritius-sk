@@ -26,12 +26,18 @@ export async function initDb() {
 			agency        TEXT,
 			source        TEXT DEFAULT 'lexpress',
 			notes         TEXT DEFAULT '',
+			year_built    TEXT DEFAULT '',
+			lat           FLOAT,
+			lng           FLOAT,
 			saved_at      TIMESTAMPTZ DEFAULT NOW()
 		)
 	`;
 	await sql`ALTER TABLE saved_listings ADD COLUMN IF NOT EXISTS source TEXT DEFAULT 'lexpress'`;
 	await sql`ALTER TABLE saved_listings ADD COLUMN IF NOT EXISTS images TEXT DEFAULT '[]'`;
 	await sql`ALTER TABLE saved_listings ADD COLUMN IF NOT EXISTS scheme TEXT DEFAULT ''`;
+	await sql`ALTER TABLE saved_listings ADD COLUMN IF NOT EXISTS year_built TEXT DEFAULT ''`;
+	await sql`ALTER TABLE saved_listings ADD COLUMN IF NOT EXISTS lat FLOAT`;
+	await sql`ALTER TABLE saved_listings ADD COLUMN IF NOT EXISTS lng FLOAT`;
 	await sql.end();
 }
 
@@ -52,6 +58,9 @@ export interface SavedListing {
 	agency: string;
 	source: string;
 	notes: string;
+	year_built: string;
+	lat: number | null;
+	lng: number | null;
 	saved_at: string;
 }
 
@@ -74,7 +83,7 @@ export async function saveListing(
 	try {
 		const rows = await sql`
 			INSERT INTO saved_listings
-				(title, price, location, bedrooms, size, features, url, image, images, scheme, payment, property_type, agency, source, notes)
+				(title, price, location, bedrooms, size, features, url, image, images, scheme, payment, property_type, agency, source, notes, year_built, lat, lng)
 			VALUES (
 				${String(data.title ?? '')},
 				${String(data.price ?? '')},
@@ -90,7 +99,10 @@ export async function saveListing(
 				${String(data.property_type ?? '')},
 				${String(data.agency ?? '')},
 				${String(data.source ?? 'lexpress')},
-				${String(data.notes ?? '')}
+				${String(data.notes ?? '')},
+				${String(data.year_built ?? '')},
+				${data.lat != null ? Number(data.lat) : null},
+				${data.lng != null ? Number(data.lng) : null}
 			)
 			RETURNING id
 		`;
@@ -134,10 +146,30 @@ export async function getListing(id: number): Promise<SavedListing | null> {
 	}
 }
 
+export async function updateListingCoords(id: number, lat: number, lng: number): Promise<boolean> {
+	const sql = getClient();
+	try {
+		const result = await sql`UPDATE saved_listings SET lat = ${lat}, lng = ${lng} WHERE id = ${id}`;
+		return result.count > 0;
+	} finally {
+		await sql.end();
+	}
+}
+
 export async function deleteListing(id: number): Promise<boolean> {
 	const sql = getClient();
 	try {
 		const result = await sql`DELETE FROM saved_listings WHERE id = ${id}`;
+		return result.count > 0;
+	} finally {
+		await sql.end();
+	}
+}
+
+export async function updateListingYearBuilt(id: number, year_built: string): Promise<boolean> {
+	const sql = getClient();
+	try {
+		const result = await sql`UPDATE saved_listings SET year_built = ${year_built} WHERE id = ${id}`;
 		return result.count > 0;
 	} finally {
 		await sql.end();
