@@ -12,6 +12,18 @@
 
 	const sourceName = SOURCE_NAMES[l.source] ?? l.source;
 	const savedDate = new Date(l.saved_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+
+	// Build deduplicated image list: images[] first, fallback to image
+	const allImages = $derived.by(() => {
+		const imgs: string[] = [];
+		const seen = new Set<string>();
+		for (const img of [...(l.images ?? []), ...(l.image ? [l.image] : [])]) {
+			if (img && !seen.has(img)) { seen.add(img); imgs.push(img); }
+		}
+		return imgs;
+	});
+
+	let activeImg = $state(0);
 </script>
 
 <svelte:head>
@@ -40,24 +52,59 @@
 			<div class="lg:col-span-2 space-y-6">
 
 				<!-- Hero image -->
-				<div class="rounded-2xl overflow-hidden bg-gray-200 aspect-[16/9] relative shadow-sm">
-					{#if l.image}
-						<img src={l.image} alt={l.title} class="w-full h-full object-cover" />
-					{:else}
-						<div class="w-full h-full flex items-center justify-center text-gray-300">
-							<svg class="w-20 h-20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+				<!-- Image gallery -->
+				<div class="space-y-2">
+					<div class="rounded-2xl overflow-hidden bg-gray-200 aspect-[16/9] relative shadow-sm">
+						{#if allImages.length > 0}
+							<img src={allImages[activeImg]} alt={l.title} class="w-full h-full object-cover" />
+							{#if allImages.length > 1}
+								<button
+									onclick={() => activeImg = (activeImg - 1 + allImages.length) % allImages.length}
+									class="absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 bg-black/40 hover:bg-black/60 text-white rounded-full flex items-center justify-center transition-colors backdrop-blur-sm"
+									aria-label="Previous image"
+								>
+									<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+								</button>
+								<button
+									onclick={() => activeImg = (activeImg + 1) % allImages.length}
+									class="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 bg-black/40 hover:bg-black/60 text-white rounded-full flex items-center justify-center transition-colors backdrop-blur-sm"
+									aria-label="Next image"
+								>
+									<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+								</button>
+								<span class="absolute bottom-3 right-3 text-xs bg-black/50 text-white px-2.5 py-1 rounded-full backdrop-blur-sm">
+									{activeImg + 1} / {allImages.length}
+								</span>
+							{/if}
+						{:else}
+							<div class="w-full h-full flex items-center justify-center text-gray-300">
+								<svg class="w-20 h-20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+							</div>
+						{/if}
+						<div class="absolute top-4 left-4 flex gap-2">
+							<span class="text-xs font-semibold px-3 py-1.5 rounded-full shadow {l.payment === 'rent' ? 'bg-[#2d6a4f] text-white' : 'bg-[#0077b6] text-white'}">
+								{l.payment === 'rent' ? 'For Rent' : 'For Sale'}
+							</span>
+							{#if l.property_type}
+								<span class="text-xs font-semibold px-3 py-1.5 rounded-full bg-black/50 text-white shadow">{l.property_type}</span>
+							{/if}
+						</div>
+					</div>
+
+					<!-- Thumbnail strip -->
+					{#if allImages.length > 1}
+						<div class="flex gap-2 overflow-x-auto pb-1">
+							{#each allImages as img, i}
+								<button
+									onclick={() => activeImg = i}
+									class="flex-shrink-0 w-20 h-14 rounded-lg overflow-hidden border-2 transition-all {activeImg === i ? 'border-[#0077b6] opacity-100' : 'border-transparent opacity-60 hover:opacity-90'}"
+								>
+									<img src={img} alt="Photo {i + 1}" class="w-full h-full object-cover" loading="lazy" />
+								</button>
+							{/each}
 						</div>
 					{/if}
-					<div class="absolute top-4 left-4 flex gap-2">
-						<span class="text-xs font-semibold px-3 py-1.5 rounded-full shadow {l.payment === 'rent' ? 'bg-[#2d6a4f] text-white' : 'bg-[#0077b6] text-white'}">
-							{l.payment === 'rent' ? 'For Rent' : 'For Sale'}
-						</span>
-						{#if l.property_type}
-							<span class="text-xs font-semibold px-3 py-1.5 rounded-full bg-black/50 text-white shadow">{l.property_type}</span>
-						{/if}
-					</div>
 				</div>
-
 				<!-- Title & price -->
 				<div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
 					<h1 class="font-bold text-2xl sm:text-3xl text-gray-900 leading-snug mb-3" style="font-family:'Playfair Display',serif">{l.title}</h1>

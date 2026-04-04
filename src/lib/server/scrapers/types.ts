@@ -7,6 +7,7 @@ export interface Listing {
 	bedrooms: string;
 	size: string;
 	image: string;
+	images: string[];
 	agency: string;
 	payment: string;
 	property_type: string;

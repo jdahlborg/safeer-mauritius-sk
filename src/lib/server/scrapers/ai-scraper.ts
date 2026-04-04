@@ -68,7 +68,8 @@ Return a JSON array (no markdown, no explanation) where each item has:
 - bedrooms: string (number or empty string)
 - size: string (floor area or empty string)
 - features: string[] (amenities list, can be empty)
-- image: string (absolute image URL or empty string)
+- image: string (primary/first image absolute URL or empty string)
+- images: string[] (ALL image URLs for this listing — include every photo found, absolute URLs)
 - payment: "buy" | "rent"
 - property_type: string (apartment/villa/house/land/penthouse/office or empty string)
 - url: string (absolute URL to the listing detail page)
@@ -77,7 +78,9 @@ Return a JSON array (no markdown, no explanation) where each item has:
 Rules:
 - Only include actual property listings (not navigation links, banners, etc.)
 - All URLs must be absolute (prepend ${new URL(baseUrl).origin} to relative paths)
-- If a field is unknown, use empty string
+- For images: collect every <img> src and srcset URL associated with a listing; include gallery images, thumbnails, and hero images
+- The "image" field should be the best/largest single image; "images" should contain all of them including "image"
+- If a field is unknown, use empty string or []
 - Return [] if no listings are found
 
 HTML:

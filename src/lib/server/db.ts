@@ -19,6 +19,7 @@ export async function initDb() {
 			features      TEXT,
 			url           TEXT UNIQUE,
 			image         TEXT,
+			images        TEXT DEFAULT '[]',
 			payment       TEXT,
 			property_type TEXT,
 			agency        TEXT,
@@ -27,10 +28,8 @@ export async function initDb() {
 			saved_at      TIMESTAMPTZ DEFAULT NOW()
 		)
 	`;
-	// Add source column to existing tables that predate this schema
-	await sql`
-		ALTER TABLE saved_listings ADD COLUMN IF NOT EXISTS source TEXT DEFAULT 'lexpress'
-	`;
+	await sql`ALTER TABLE saved_listings ADD COLUMN IF NOT EXISTS source TEXT DEFAULT 'lexpress'`;
+	await sql`ALTER TABLE saved_listings ADD COLUMN IF NOT EXISTS images TEXT DEFAULT '[]'`;
 	await sql.end();
 }
 
@@ -44,6 +43,7 @@ export interface SavedListing {
 	features: string[];
 	url: string;
 	image: string;
+	images: string[];
 	payment: string;
 	property_type: string;
 	agency: string;
@@ -57,7 +57,10 @@ function parseRow(row: Record<string, unknown>): SavedListing {
 		...row,
 		features: (() => {
 			try { return JSON.parse(row.features as string); } catch { return []; }
-		})()
+		})(),
+		images: (() => {
+			try { return JSON.parse(row.images as string); } catch { return []; }
+		})(),
 	} as SavedListing;
 }
 
@@ -68,7 +71,7 @@ export async function saveListing(
 	try {
 		const rows = await sql`
 			INSERT INTO saved_listings
-				(title, price, location, bedrooms, size, features, url, image, payment, property_type, agency, source, notes)
+				(title, price, location, bedrooms, size, features, url, image, images, payment, property_type, agency, source, notes)
 			VALUES (
 				${String(data.title ?? '')},
 				${String(data.price ?? '')},
@@ -78,6 +81,7 @@ export async function saveListing(
 				${JSON.stringify(data.features ?? [])},
 				${String(data.url ?? '')},
 				${String(data.image ?? '')},
+				${JSON.stringify(data.images ?? [])},
 				${String(data.payment ?? '')},
 				${String(data.property_type ?? '')},
 				${String(data.agency ?? '')},
