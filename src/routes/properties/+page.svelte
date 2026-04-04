@@ -14,7 +14,6 @@
 	);
 	let filterQ = $state(page.url.searchParams.get('q') ?? '');
 	let filterType = $state(page.url.searchParams.get('type') ?? '');
-	let filterArea = $state('');
 	let filterScheme = $state('');
 	let filterMinBeds = $state(page.url.searchParams.get('minBeds') ?? '');
 	let activeId = $state<number | null>(null);
@@ -25,7 +24,6 @@
 	$effect(() => { filterRegion = activeRegion; });
 	$effect(() => { activeRegion = filterRegion; });
 
-	const areas = [...new Set(listings.map(l => l.location.split(',')[1]?.trim()).filter(Boolean))].sort();
 	const types = [...new Set(listings.map(l => l.property_type).filter(Boolean))].sort();
 	const schemes = [...new Set(listings.map(l => l.scheme).filter(Boolean))].sort();
 
@@ -33,7 +31,6 @@
 		listings.filter(l => {
 			if (tab !== 'all' && l.payment !== tab) return false;
 			if (filterType && l.property_type !== filterType) return false;
-			if (filterArea && !l.location.includes(filterArea)) return false;
 			if (filterScheme && l.scheme !== filterScheme) return false;
 			if (filterQ) {
 				const q = filterQ.toLowerCase();
@@ -56,7 +53,7 @@
 	const mappable = $derived(filtered.filter(l => l.lat != null && l.lng != null));
 
 	function clearFilters() {
-		tab = 'all'; filterQ = ''; filterType = ''; filterArea = ''; filterScheme = ''; filterMinBeds = ''; filterRegion = null; activeRegion = null;
+		tab = 'all'; filterQ = ''; filterType = ''; filterScheme = ''; filterMinBeds = ''; filterRegion = null; activeRegion = null;
 	}
 </script>
 
@@ -103,11 +100,6 @@
 			{#each types as t}<option value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</option>{/each}
 		</select>
 
-		<!-- Area -->
-		<select bind:value={filterArea} class="text-sm border border-gray-200 rounded-lg px-2.5 py-1.5 bg-white text-gray-700 focus:outline-none focus:ring-1 focus:ring-[#0077b6]">
-			<option value="">All Areas</option>
-			{#each areas as a}<option value={a}>{a}</option>{/each}
-		</select>
 
 		<!-- Min beds -->
 		<select bind:value={filterMinBeds} class="text-sm border border-gray-200 rounded-lg px-2.5 py-1.5 bg-white text-gray-700 focus:outline-none focus:ring-1 focus:ring-[#0077b6]">
@@ -146,7 +138,7 @@
 		{/if}
 
 		<span class="text-gray-400 text-xs ml-auto">{filtered.length} listing{filtered.length !== 1 ? 's' : ''}</span>
-		{#if filterQ || filterType || filterArea || filterScheme || filterMinBeds || tab !== 'all' || filterRegion}
+		{#if filterQ || filterType || filterScheme || filterMinBeds || tab !== 'all' || filterRegion}
 			<button onclick={clearFilters} class="text-xs text-[#0077b6] hover:underline">Clear</button>
 		{/if}
 	</div>
