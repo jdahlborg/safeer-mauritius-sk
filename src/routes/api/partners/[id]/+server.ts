@@ -1,5 +1,5 @@
 import { json } from '@sveltejs/kit';
-import { updatePartnerStatus, updatePartnerNotes, deletePartner } from '$lib/server/db';
+import { updatePartnerStatus, updatePartnerNotes, updatePartnerWebsite, deletePartner } from '$lib/server/db';
 import type { RequestHandler } from './$types';
 
 export const PATCH: RequestHandler = async ({ params, request }) => {
@@ -9,6 +9,7 @@ export const PATCH: RequestHandler = async ({ params, request }) => {
 	const body = await request.json();
 	if (body.status !== undefined) await updatePartnerStatus(id, body.status);
 	if (body.notes !== undefined) await updatePartnerNotes(id, body.notes);
+	if (body.website !== undefined) await updatePartnerWebsite(id, body.website);
 	return json({ ok: true });
 };
 

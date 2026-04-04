@@ -163,6 +163,7 @@ export interface Partner {
 	agreed_terms: boolean;
 	status: 'pending' | 'active' | 'rejected';
 	notes: string;
+	website: string;
 	created_at: string;
 }
 
@@ -191,7 +192,7 @@ export async function initPartnersTable() {
 
 export async function savePartner(data: {
 	name: string; company: string; email: string; phone: string;
-	partner_type: string; message: string; agreed_terms: boolean;
+	partner_type: string; message: string; agreed_terms: boolean; website?: string;
 }): Promise<{ ok: boolean; id?: number; error?: string }> {
 	const sql = getClient();
 	try {
@@ -212,9 +213,9 @@ export async function savePartner(data: {
 			)
 		`;
 		const rows = await sql`
-			INSERT INTO partners (name, company, email, phone, partner_type, message, agreed_terms)
+			INSERT INTO partners (name, company, email, phone, partner_type, message, agreed_terms, website)
 			VALUES (${data.name}, ${data.company}, ${data.email}, ${data.phone},
-			        ${data.partner_type}, ${data.message}, ${data.agreed_terms})
+			        ${data.partner_type}, ${data.message}, ${data.agreed_terms}, ${data.website ?? ''})
 			RETURNING id
 		`;
 		return { ok: true, id: rows[0].id as number };
@@ -240,11 +241,23 @@ export async function getPartners(): Promise<Partner[]> {
 				agreed_terms BOOLEAN DEFAULT false,
 				status       TEXT DEFAULT 'pending',
 				notes        TEXT DEFAULT '',
+				website      TEXT DEFAULT '',
 				created_at   TIMESTAMPTZ DEFAULT NOW()
 			)
 		`;
+		await sql`ALTER TABLE partners ADD COLUMN IF NOT EXISTS website TEXT DEFAULT ''`;
 		const rows = await sql`SELECT * FROM partners ORDER BY created_at DESC`;
 		return rows as unknown as Partner[];
+	} finally {
+		await sql.end();
+	}
+}
+
+export async function updatePartnerWebsite(id: number, website: string): Promise<boolean> {
+	const sql = getClient();
+	try {
+		const result = await sql`UPDATE partners SET website = ${website} WHERE id = ${id}`;
+		return result.count > 0;
 	} finally {
 		await sql.end();
 	}
