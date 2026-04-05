@@ -30,7 +30,7 @@
 The admin dashboard is at `/admin` (protected by `ADMIN_SECRET`).
 
 ### Standard scrapers (Cheerio-based)
-1. Admin selects a source (L'Express Property, Ally's Real Estate, 2Futures, or Property.mu), transaction type, property type, sort order, and number of pages.
+1. Admin selects a source (L'Express Property, Ally's Real Estate, or 2Futures), transaction type, property type, sort order, and number of pages.
 2. Clicks "Scrape Listings" which calls `GET /api/scrape` with the chosen params.
 3. The server-side scraper (Cheerio) fetches the portal HTML and parses listing data.
 4. Results appear as cards. Admin can save individual listings or click "Save All".

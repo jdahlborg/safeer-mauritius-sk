@@ -10,8 +10,7 @@
 	const SOURCES = [
 		{ id: 'lexpress', name: "L'Express Property", payments: ['buy', 'rent', 'holiday'], propertyTypes: ['apartment', 'villa', 'house', 'land', 'office', 'penthouse'], sortable: true },
 		{ id: 'allysmu', name: "Ally's Real Estate", payments: ['buy', 'rent'], propertyTypes: ['any'], sortable: false },
-		{ id: '2futures', name: '2Futures', payments: ['buy'], propertyTypes: ['any'], sortable: false },
-		{ id: 'propertymu', name: 'Property.mu', payments: ['buy', 'rent'], propertyTypes: ['any'], sortable: false }
+		{ id: '2futures', name: '2Futures', payments: ['buy'], propertyTypes: ['any'], sortable: false }
 	];
 
 	// ── Scraper state ──────────────────────────────────────
