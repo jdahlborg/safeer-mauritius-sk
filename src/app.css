@@ -307,3 +307,40 @@ html { scroll-behavior: smooth; }
 @media (prefers-reduced-motion: reduce) {
 	* { transition: none !important; animation: none !important; }
 }
+
+/* ── Leaflet marker cluster ─────────────────────────────── */
+.marker-cluster {
+	background-clip: padding-box;
+	border-radius: 50%;
+}
+.marker-cluster div {
+	width: 34px; height: 34px;
+	margin: 5px;
+	border-radius: 50%;
+	display: flex; align-items: center; justify-content: center;
+	font-family: 'Inter', sans-serif;
+	font-size: 13px; font-weight: 700;
+	color: #fff;
+}
+.marker-cluster span { line-height: 1; }
+
+/* Small cluster (< 10) — brand blue */
+.marker-cluster-small {
+	background-color: rgba(0, 119, 182, 0.18);
+	border: 2px solid rgba(0, 119, 182, 0.35);
+}
+.marker-cluster-small div { background-color: #0077b6; }
+
+/* Medium cluster (10–99) — deeper blue */
+.marker-cluster-medium {
+	background-color: rgba(0, 95, 138, 0.18);
+	border: 2px solid rgba(0, 95, 138, 0.35);
+}
+.marker-cluster-medium div { background-color: #005f8a; }
+
+/* Large cluster (100+) — gold accent */
+.marker-cluster-large {
+	background-color: rgba(201, 169, 110, 0.2);
+	border: 2px solid rgba(201, 169, 110, 0.45);
+}
+.marker-cluster-large div { background-color: #b8893a; }
