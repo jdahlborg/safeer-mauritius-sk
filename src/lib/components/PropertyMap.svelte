@@ -23,12 +23,14 @@
 	let mapEl: HTMLDivElement;
 	let map: import('leaflet').Map | null = null;
 	let markers: Map<number, import('leaflet').Marker> = new Map();
+	let clusterGroup: import('leaflet.markercluster').MarkerClusterGroup | null = null;
 	let regionLayers: Map<Region, import('leaflet').Layer> = new Map();
 
 	const MAURITIUS: [number, number] = [-20.25, 57.55];
 
 	onMount(async () => {
 		const L = (await import('leaflet')).default;
+		await import('leaflet.markercluster');
 
 		map = L.map(mapEl, { zoomControl: true }).setView(MAURITIUS, 10);
 
@@ -36,6 +38,13 @@
 			attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
 			maxZoom: 18,
 		}).addTo(map);
+
+		clusterGroup = (L as typeof L & { markerClusterGroup: (opts?: object) => import('leaflet.markercluster').MarkerClusterGroup }).markerClusterGroup({
+			maxClusterRadius: 60,
+			showCoverageOnHover: false,
+			zoomToBoundsOnClick: true,
+		});
+		clusterGroup.addTo(map);
 
 		await loadGeoJSON(L);
 		addMarkers(L);
@@ -190,14 +199,13 @@
 	}
 
 	function addMarkers(L: typeof import('leaflet')) {
-		if (!map) return;
-		markers.forEach(m => m.remove());
+		if (!map || !clusterGroup) return;
+		clusterGroup.clearLayers();
 		markers = new Map();
 
 		for (const l of listings) {
 			if (l.lat == null || l.lng == null) continue;
 			const marker = L.marker([l.lat, l.lng], { icon: makeIcon(L, l.transaction_type) })
-				.addTo(map!)
 				.bindPopup(`
 					<a href="/properties/${l.id}" style="text-decoration:none;color:inherit">
 						${l.image ? `<img src="${l.image}" style="width:180px;height:100px;object-fit:cover;border-radius:6px;margin-bottom:6px;display:block">` : ''}
@@ -208,6 +216,7 @@
 				`, { maxWidth: 200 });
 
 			marker.on('click', () => { activeId = l.id; });
+			clusterGroup!.addLayer(marker);
 			markers.set(l.id, marker);
 		}
 	}
@@ -256,6 +265,8 @@
 
 <svelte:head>
 	<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+	<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+	<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
 </svelte:head>
 
 <div bind:this={mapEl} class="w-full h-full rounded-2xl overflow-hidden"></div>
