@@ -2,7 +2,8 @@ import { Resend } from 'resend';
 import { env } from '$env/dynamic/private';
 import { createMagicLink } from './db';
 
-const FROM_EMAIL = 'noreply@safeer.mu';
+// Use Resend's shared domain until a custom domain is verified
+const FROM_EMAIL = 'onboarding@resend.dev';
 
 export async function sendMagicLink(email: string, origin: string): Promise<{ ok: boolean; error?: string }> {
 	try {
