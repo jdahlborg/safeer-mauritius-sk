@@ -90,8 +90,8 @@
 							</div>
 						{/if}
 						<div class="absolute top-4 left-4 flex gap-2">
-							<span class="text-xs font-semibold px-3 py-1.5 rounded-full shadow {l.payment === 'rent' ? 'bg-[#2d6a4f] text-white' : 'bg-[#0077b6] text-white'}">
-								{l.payment === 'rent' ? 'For Rent' : 'For Sale'}
+							<span class="text-xs font-semibold px-3 py-1.5 rounded-full shadow {l.transaction_type === 'rent' ? 'bg-[#2d6a4f] text-white' : 'bg-[#0077b6] text-white'}">
+								{l.transaction_type === 'rent' ? 'For Rent' : 'For Sale'}
 							</span>
 							{#if l.property_type}
 								<span class="text-xs font-semibold px-3 py-1.5 rounded-full bg-black/50 text-white shadow">{l.property_type}</span>
@@ -182,7 +182,7 @@
 							</div>
 							<div>
 								<div class="text-xs text-gray-400">Transaction</div>
-								<div class="font-semibold text-gray-900 text-sm">{l.payment === 'rent' ? 'For Rent' : 'For Sale'}</div>
+								<div class="font-semibold text-gray-900 text-sm">{l.transaction_type === 'rent' ? 'For Rent' : 'For Sale'}</div>
 							</div>
 						</div>
 						<div class="flex items-center gap-3">
@@ -205,14 +205,14 @@
 								</div>
 							</div>
 						{/if}
-						{#if l.year_built}
+						{#if l.available_from}
 							<div class="flex items-center gap-3">
 								<div class="w-9 h-9 rounded-lg bg-orange-50 flex items-center justify-center flex-shrink-0">
 									<svg class="w-5 h-5 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
 								</div>
 								<div>
-									<div class="text-xs text-gray-400">Year Built</div>
-									<div class="font-semibold text-gray-900 text-sm">{l.year_built}</div>
+									<div class="text-xs text-gray-400">Available From</div>
+									<div class="font-semibold text-gray-900 text-sm">{l.available_from}</div>
 								</div>
 							</div>
 						{/if}

@@ -1,5 +1,5 @@
 import { json } from '@sveltejs/kit';
-import { deleteListing, updateNotes, updateListingScheme, updateListingYearBuilt } from '$lib/server/db';
+import { deleteListing, updateNotes, updateListingScheme, updateListingAvailableFrom } from '$lib/server/db';
 import type { RequestHandler } from './$types';
 
 export const DELETE: RequestHandler = async ({ params }) => {
@@ -12,6 +12,6 @@ export const PATCH: RequestHandler = async ({ params, request }) => {
 	const body = await request.json();
 	if (body.notes !== undefined) await updateNotes(id, body.notes ?? '');
 	if (body.scheme !== undefined) await updateListingScheme(id, body.scheme ?? '');
-	if (body.year_built !== undefined) await updateListingYearBuilt(id, body.year_built ?? '');
+	if (body.available_from !== undefined) await updateListingAvailableFrom(id, body.available_from ?? '');
 	return json({ ok: true });
 };

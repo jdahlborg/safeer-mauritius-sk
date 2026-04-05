@@ -41,12 +41,12 @@ export interface Listing {
 	size: string;
 	image: string;
 	agency: string;
-	payment: string;
+	transaction_type: string;
 	property_type: string;
 }
 
-function buildUrl(payment: string, propertyType: string, sortBy: string, page: number): string {
-	const pSlug = PAYMENT_SLUGS[payment.toLowerCase()] ?? 'buy-mauritius';
+function buildUrl(transactionType: string, propertyType: string, sortBy: string, page: number): string {
+	const pSlug = PAYMENT_SLUGS[transactionType.toLowerCase()] ?? 'buy-mauritius';
 	const tSlug = PROPERTY_SLUGS[propertyType.toLowerCase()] ?? 'apartment';
 	const sort = SORT_PARAMS[sortBy] ?? '-created_at';
 	return `${BASE_URL}/${pSlug}/${tSlug}?sort=${sort}&p=${page}`;
@@ -125,14 +125,14 @@ async function scrapePage(url: string): Promise<{ listings: Listing[]; error: st
 }
 
 export async function collect(
-	payment = 'buy',
+	transactionType = 'buy',
 	propertyType = 'apartment',
 	sortBy = 'most_recent',
 	pages = 1
 ): Promise<{ listings: Listing[]; error: string | null }> {
 	const all: Listing[] = [];
 	for (let page = 1; page <= pages; page++) {
-		const url = buildUrl(payment, propertyType, sortBy, page);
+		const url = buildUrl(transactionType, propertyType, sortBy, page);
 		const { listings, error } = await scrapePage(url);
 		all.push(...listings);
 		if (error) return { listings: all, error };

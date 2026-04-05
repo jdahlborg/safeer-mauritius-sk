@@ -71,9 +71,9 @@ async function scrapePage(url: string): Promise<ScrapeResult> {
 		// Payment type: look for "For Sale" / "For Rent" badge text
 		const badgeText = link.text();
 		if (/for\s*rent/i.test(badgeText)) {
-			prop.payment = 'rent';
+			prop.transaction_type = 'rent';
 		} else {
-			prop.payment = 'buy'; // default to sale
+			prop.transaction_type = 'buy'; // default to sale
 		}
 
 		// Description paragraph with markdown metadata
@@ -117,7 +117,7 @@ export const allysSource: ScraperSource = {
 	name: "Ally's Real Estate",
 	url: 'https://www.allys.mu/en/properties',
 	filters: {
-		payment: ['buy', 'rent'],
+		transaction_type: ['buy', 'rent'],
 		propertyType: ['any'],
 		sortBy: ['most_recent']
 	},

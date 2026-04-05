@@ -429,8 +429,8 @@
 													{:else}
 														<div class="w-full h-full flex items-center justify-center text-gray-300 text-xs">No image</div>
 													{/if}
-													<span class="absolute top-2 left-2 text-xs font-semibold px-2 py-0.5 rounded-full {listing.payment === 'rent' ? 'bg-[#2d6a4f] text-white' : 'bg-[#0077b6] text-white'}">
-														{listing.payment === 'rent' ? 'Rent' : 'Sale'}
+													<span class="absolute top-2 left-2 text-xs font-semibold px-2 py-0.5 rounded-full {listing.transaction_type === 'rent' ? 'bg-[#2d6a4f] text-white' : 'bg-[#0077b6] text-white'}">
+														{listing.transaction_type === 'rent' ? 'Rent' : 'Sale'}
 													</span>
 													{#if state === 'saved'}
 														<span class="absolute top-2 right-2 w-6 h-6 bg-[#2d6a4f] text-white rounded-full flex items-center justify-center text-xs shadow">✓</span>

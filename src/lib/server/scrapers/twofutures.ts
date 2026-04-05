@@ -40,7 +40,7 @@ async function scrapePage(url: string): Promise<ScrapeResult> {
 		const prop: Partial<Listing> = {};
 		prop.url = propUrl;
 		prop.agency = AGENCY;
-		prop.payment = 'buy'; // 2futures only sells
+		prop.transaction_type = 'buy'; // 2futures only sells
 		prop.features = [];
 
 		// Image
@@ -100,7 +100,7 @@ export const twofuturesSource: ScraperSource = {
 	name: '2Futures',
 	url: 'https://2futures.com/properties',
 	filters: {
-		payment: ['buy'],
+		transaction_type: ['buy'],
 		propertyType: ['any'],
 		sortBy: ['most_recent']
 	},

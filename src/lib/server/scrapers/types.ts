@@ -9,14 +9,14 @@ export interface Listing {
 	image: string;
 	images: string[];
 	scheme: string;
-	year_built: string;
+	available_from: string;
 	agency: string;
-	payment: string;
+	transaction_type: string;
 	property_type: string;
 }
 
 export interface ScrapeOptions {
-	payment: string;
+	transaction_type: string;
 	propertyType: string;
 	sortBy: string;
 	pages: number;
@@ -32,7 +32,7 @@ export interface ScraperSource {
 	name: string;
 	url: string;
 	filters: {
-		payment: string[];
+		transaction_type: string[];
 		propertyType: string[];
 		sortBy: string[];
 	};

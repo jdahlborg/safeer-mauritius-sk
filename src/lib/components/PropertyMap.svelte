@@ -7,7 +7,7 @@
 		title: string;
 		price: string;
 		location: string;
-		payment: string;
+		transaction_type: string;
 		property_type: string;
 		image: string;
 		lat: number;
@@ -178,8 +178,8 @@
 		};
 	}
 
-	function makeIcon(L: typeof import('leaflet'), payment: string, active = false) {
-		const color = payment === 'rent' ? '#2d6a4f' : '#0077b6';
+	function makeIcon(L: typeof import('leaflet'), transactionType: string, active = false) {
+		const color = transactionType === 'rent' ? '#2d6a4f' : '#0077b6';
 		const size = active ? 14 : 10;
 		return L.divIcon({
 			className: '',
@@ -196,7 +196,7 @@
 
 		for (const l of listings) {
 			if (l.lat == null || l.lng == null) continue;
-			const marker = L.marker([l.lat, l.lng], { icon: makeIcon(L, l.payment) })
+			const marker = L.marker([l.lat, l.lng], { icon: makeIcon(L, l.transaction_type) })
 				.addTo(map!)
 				.bindPopup(`
 					<a href="/properties/${l.id}" style="text-decoration:none;color:inherit">
@@ -226,7 +226,7 @@
 			markers.forEach((marker, id) => {
 				const listing = listings.find(l => l.id === id);
 				if (!listing) return;
-				marker.setIcon(makeIcon(L, listing.payment, id === activeId));
+				marker.setIcon(makeIcon(L, listing.transaction_type, id === activeId));
 				if (id === activeId) {
 					marker.openPopup();
 					map!.panTo(marker.getLatLng(), { animate: true });

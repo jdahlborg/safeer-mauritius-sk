@@ -71,8 +71,8 @@ Return a JSON array (no markdown, no explanation) where each item has:
 - image: string (primary/first image absolute URL or empty string)
 - images: string[] (ALL image URLs for this listing — include every photo found, absolute URLs)
 - scheme: string (Mauritius property scheme if mentioned: "PDS", "IRS", "RES", "G+2", "Smart City", or empty string)
-- year_built: string (year of construction if mentioned, e.g. "2022", or empty string)
-- payment: "buy" | "rent"
+- available_from: string (availability date if mentioned — e.g. "2022", "March 2026", "Q3 2025" — or empty string)
+- transaction_type: "buy" | "rent"
 - property_type: string (apartment/villa/house/land/penthouse/office or empty string)
 - url: string (absolute URL to the listing detail page)
 - agency: string (set to "${agency}")

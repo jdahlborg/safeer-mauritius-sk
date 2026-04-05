@@ -9,14 +9,14 @@
 	let submitting = $state(false);
 
 	// ── Search form ────────────────────────────────────────
-	let payment = $state('buy');
+	let transactionType = $state('buy');
 	let searchQ = $state('');
 	let searchType = $state('');
 	let searchBeds = $state('');
 
 	function search() {
 		const params = new URLSearchParams();
-		params.set('payment', payment);
+		params.set('transaction_type', transactionType);
 		if (searchQ) params.set('q', searchQ);
 		if (searchType) params.set('type', searchType);
 		if (searchBeds) params.set('minBeds', searchBeds);
@@ -104,15 +104,15 @@
 			<div class="flex border-b border-gray-100">
 				{#each [['buy', ts('search_buy')], ['rent', ts('search_rent')]] as [val, label]}
 					<button
-						onclick={() => (payment = val)}
+						onclick={() => (transactionType = val)}
 						class="flex-1 py-3.5 text-sm font-semibold transition-colors relative"
-						class:text-[#0077b6]={payment === val}
-						class:text-gray-400={payment !== val}
-						class:bg-white={payment === val}
-						class:bg-gray-50={payment !== val}
+						class:text-[#0077b6]={transactionType === val}
+						class:text-gray-400={transactionType !== val}
+						class:bg-white={transactionType === val}
+						class:bg-gray-50={transactionType !== val}
 					>
 						{label}
-						{#if payment === val}
+						{#if transactionType === val}
 							<span class="absolute bottom-0 left-0 right-0 h-0.5 bg-[#0077b6]"></span>
 						{/if}
 					</button>

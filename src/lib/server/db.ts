@@ -5,39 +5,80 @@ function getClient() {
 	return postgres(env.DATABASE_URL!, { ssl: 'require', max: 5 });
 }
 
-// Run once to create the table
+// Run once to create/migrate the table
 export async function initDb() {
 	const sql = getClient();
+
+	// Rename table if still using old name
 	await sql`
-		CREATE TABLE IF NOT EXISTS saved_listings (
-			id            SERIAL PRIMARY KEY,
-			title         TEXT,
-			price         TEXT,
-			location      TEXT,
-			bedrooms      TEXT,
-			size          TEXT,
-			features      TEXT,
-			url           TEXT UNIQUE,
-			image         TEXT,
-			images        TEXT DEFAULT '[]',
-			scheme        TEXT DEFAULT '',
-			payment       TEXT,
-			property_type TEXT,
-			agency        TEXT,
-			source        TEXT DEFAULT 'lexpress',
-			notes         TEXT DEFAULT '',
-			year_built    TEXT DEFAULT '',
-			lat           FLOAT,
-			lng           FLOAT,
-			saved_at      TIMESTAMPTZ DEFAULT NOW()
+		DO $$ BEGIN
+			IF EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'saved_listings') THEN
+				ALTER TABLE saved_listings RENAME TO listings;
+			END IF;
+		END $$
+	`;
+
+	await sql`
+		CREATE TABLE IF NOT EXISTS listings (
+			id               SERIAL PRIMARY KEY,
+			title            TEXT,
+			price            TEXT,
+			location         TEXT,
+			bedrooms         TEXT,
+			size             TEXT,
+			features         TEXT,
+			url              TEXT UNIQUE,
+			image            TEXT,
+			images           TEXT DEFAULT '[]',
+			scheme           TEXT DEFAULT '',
+			transaction_type TEXT,
+			property_type    TEXT,
+			agency           TEXT,
+			source           TEXT DEFAULT 'lexpress',
+			notes            TEXT DEFAULT '',
+			available_from   TEXT DEFAULT '',
+			lat              FLOAT,
+			lng              FLOAT,
+			saved_at         TIMESTAMPTZ DEFAULT NOW()
 		)
 	`;
-	await sql`ALTER TABLE saved_listings ADD COLUMN IF NOT EXISTS source TEXT DEFAULT 'lexpress'`;
-	await sql`ALTER TABLE saved_listings ADD COLUMN IF NOT EXISTS images TEXT DEFAULT '[]'`;
-	await sql`ALTER TABLE saved_listings ADD COLUMN IF NOT EXISTS scheme TEXT DEFAULT ''`;
-	await sql`ALTER TABLE saved_listings ADD COLUMN IF NOT EXISTS year_built TEXT DEFAULT ''`;
-	await sql`ALTER TABLE saved_listings ADD COLUMN IF NOT EXISTS lat FLOAT`;
-	await sql`ALTER TABLE saved_listings ADD COLUMN IF NOT EXISTS lng FLOAT`;
+
+	// Column migrations for existing installs
+	await sql`ALTER TABLE listings ADD COLUMN IF NOT EXISTS source TEXT DEFAULT 'lexpress'`;
+	await sql`ALTER TABLE listings ADD COLUMN IF NOT EXISTS images TEXT DEFAULT '[]'`;
+	await sql`ALTER TABLE listings ADD COLUMN IF NOT EXISTS scheme TEXT DEFAULT ''`;
+	await sql`ALTER TABLE listings ADD COLUMN IF NOT EXISTS lat FLOAT`;
+	await sql`ALTER TABLE listings ADD COLUMN IF NOT EXISTS lng FLOAT`;
+
+	// Rename year_built → available_from
+	await sql`
+		DO $$ BEGIN
+			IF EXISTS (SELECT FROM information_schema.columns WHERE table_name = 'listings' AND column_name = 'year_built') THEN
+				ALTER TABLE listings RENAME COLUMN year_built TO available_from;
+			ELSE
+				-- Add if missing entirely
+				BEGIN
+					ALTER TABLE listings ADD COLUMN available_from TEXT DEFAULT '';
+				EXCEPTION WHEN duplicate_column THEN NULL;
+				END;
+			END IF;
+		END $$
+	`;
+
+	// Rename payment → transaction_type
+	await sql`
+		DO $$ BEGIN
+			IF EXISTS (SELECT FROM information_schema.columns WHERE table_name = 'listings' AND column_name = 'payment') THEN
+				ALTER TABLE listings RENAME COLUMN payment TO transaction_type;
+			ELSE
+				BEGIN
+					ALTER TABLE listings ADD COLUMN transaction_type TEXT;
+				EXCEPTION WHEN duplicate_column THEN NULL;
+				END;
+			END IF;
+		END $$
+	`;
+
 	await sql.end();
 }
 
@@ -53,12 +94,12 @@ export interface SavedListing {
 	image: string;
 	images: string[];
 	scheme: string;
-	payment: string;
+	transaction_type: string;
 	property_type: string;
 	agency: string;
 	source: string;
 	notes: string;
-	year_built: string;
+	available_from: string;
 	lat: number | null;
 	lng: number | null;
 	saved_at: string;
@@ -82,8 +123,8 @@ export async function saveListing(
 	const sql = getClient();
 	try {
 		const rows = await sql`
-			INSERT INTO saved_listings
-				(title, price, location, bedrooms, size, features, url, image, images, scheme, payment, property_type, agency, source, notes, year_built, lat, lng)
+			INSERT INTO listings
+				(title, price, location, bedrooms, size, features, url, image, images, scheme, transaction_type, property_type, agency, source, notes, available_from, lat, lng)
 			VALUES (
 				${String(data.title ?? '')},
 				${String(data.price ?? '')},
@@ -95,12 +136,12 @@ export async function saveListing(
 				${String(data.image ?? '')},
 				${JSON.stringify(data.images ?? [])},
 				${String(data.scheme ?? '')},
-				${String(data.payment ?? '')},
+				${String(data.transaction_type ?? data.payment ?? '')},
 				${String(data.property_type ?? '')},
 				${String(data.agency ?? '')},
 				${String(data.source ?? 'lexpress')},
 				${String(data.notes ?? '')},
-				${String(data.year_built ?? '')},
+				${String(data.available_from ?? data.year_built ?? '')},
 				${data.lat != null ? Number(data.lat) : null},
 				${data.lng != null ? Number(data.lng) : null}
 			)
@@ -115,19 +156,19 @@ export async function saveListing(
 	}
 }
 
-export async function getSaved(
+export async function getListings(
 	search = '',
 	propertyType = '',
-	payment = ''
+	transactionType = ''
 ): Promise<SavedListing[]> {
 	const sql = getClient();
 	try {
 		const rows = await sql`
-			SELECT * FROM saved_listings
+			SELECT * FROM listings
 			WHERE 1=1
 			${search ? sql`AND (title ILIKE ${'%' + search + '%'} OR location ILIKE ${'%' + search + '%'})` : sql``}
 			${propertyType ? sql`AND property_type = ${propertyType}` : sql``}
-			${payment ? sql`AND payment = ${payment}` : sql``}
+			${transactionType ? sql`AND transaction_type = ${transactionType}` : sql``}
 			ORDER BY saved_at DESC
 		`;
 		return rows.map(r => parseRow(r as Record<string, unknown>));
@@ -136,10 +177,13 @@ export async function getSaved(
 	}
 }
 
+// Keep old name as alias for backwards compatibility
+export const getSaved = getListings;
+
 export async function getListing(id: number): Promise<SavedListing | null> {
 	const sql = getClient();
 	try {
-		const rows = await sql`SELECT * FROM saved_listings WHERE id = ${id}`;
+		const rows = await sql`SELECT * FROM listings WHERE id = ${id}`;
 		return rows.length ? parseRow(rows[0] as Record<string, unknown>) : null;
 	} finally {
 		await sql.end();
@@ -149,7 +193,7 @@ export async function getListing(id: number): Promise<SavedListing | null> {
 export async function updateListingCoords(id: number, lat: number, lng: number): Promise<boolean> {
 	const sql = getClient();
 	try {
-		const result = await sql`UPDATE saved_listings SET lat = ${lat}, lng = ${lng} WHERE id = ${id}`;
+		const result = await sql`UPDATE listings SET lat = ${lat}, lng = ${lng} WHERE id = ${id}`;
 		return result.count > 0;
 	} finally {
 		await sql.end();
@@ -159,17 +203,17 @@ export async function updateListingCoords(id: number, lat: number, lng: number):
 export async function deleteListing(id: number): Promise<boolean> {
 	const sql = getClient();
 	try {
-		const result = await sql`DELETE FROM saved_listings WHERE id = ${id}`;
+		const result = await sql`DELETE FROM listings WHERE id = ${id}`;
 		return result.count > 0;
 	} finally {
 		await sql.end();
 	}
 }
 
-export async function updateListingYearBuilt(id: number, year_built: string): Promise<boolean> {
+export async function updateListingAvailableFrom(id: number, available_from: string): Promise<boolean> {
 	const sql = getClient();
 	try {
-		const result = await sql`UPDATE saved_listings SET year_built = ${year_built} WHERE id = ${id}`;
+		const result = await sql`UPDATE listings SET available_from = ${available_from} WHERE id = ${id}`;
 		return result.count > 0;
 	} finally {
 		await sql.end();
@@ -179,7 +223,7 @@ export async function updateListingYearBuilt(id: number, year_built: string): Pr
 export async function updateListingScheme(id: number, scheme: string): Promise<boolean> {
 	const sql = getClient();
 	try {
-		const result = await sql`UPDATE saved_listings SET scheme = ${scheme} WHERE id = ${id}`;
+		const result = await sql`UPDATE listings SET scheme = ${scheme} WHERE id = ${id}`;
 		return result.count > 0;
 	} finally {
 		await sql.end();
@@ -189,7 +233,7 @@ export async function updateListingScheme(id: number, scheme: string): Promise<b
 export async function updateNotes(id: number, notes: string): Promise<boolean> {
 	const sql = getClient();
 	try {
-		const result = await sql`UPDATE saved_listings SET notes = ${notes} WHERE id = ${id}`;
+		const result = await sql`UPDATE listings SET notes = ${notes} WHERE id = ${id}`;
 		return result.count > 0;
 	} finally {
 		await sql.end();
@@ -197,7 +241,7 @@ export async function updateNotes(id: number, notes: string): Promise<boolean> {
 }
 
 export async function exportAll(): Promise<SavedListing[]> {
-	return getSaved();
+	return getListings();
 }
 
 // ── Partners ─────────────────────────────────────────────────────────────────

@@ -32,8 +32,8 @@ const HEADERS = {
 	'Accept-Language': 'en-US,en;q=0.9'
 };
 
-function buildUrl(payment: string, propertyType: string, sortBy: string, page: number): string {
-	const pSlug = PAYMENT_SLUGS[payment.toLowerCase()] ?? 'buy-mauritius';
+function buildUrl(transactionType: string, propertyType: string, sortBy: string, page: number): string {
+	const pSlug = PAYMENT_SLUGS[transactionType.toLowerCase()] ?? 'buy-mauritius';
 	const tSlug = PROPERTY_SLUGS[propertyType.toLowerCase()] ?? 'apartment';
 	const sort = SORT_PARAMS[sortBy] ?? '-created_at';
 	return `${BASE_URL}/${pSlug}/${tSlug}?sort=${sort}&p=${page}`;
@@ -107,16 +107,16 @@ export const lexpressSource: ScraperSource = {
 	name: "L'Express Property",
 	url: 'https://www.lexpressproperty.com',
 	filters: {
-		payment: ['buy', 'rent', 'holiday'],
+		transaction_type: ['buy', 'rent', 'holiday'],
 		propertyType: ['apartment', 'villa', 'house', 'land', 'office', 'warehouse', 'commercial', 'penthouse'],
 		sortBy: ['most_recent', 'least_expensive', 'most_expensive']
 	},
-	async collect({ payment, propertyType, sortBy, pages }: ScrapeOptions): Promise<ScrapeResult> {
+	async collect({ transaction_type, propertyType, sortBy, pages }: ScrapeOptions): Promise<ScrapeResult> {
 		const all: Listing[] = [];
 		for (let page = 1; page <= pages; page++) {
-			const url = buildUrl(payment, propertyType, sortBy, page);
+			const url = buildUrl(transaction_type, propertyType, sortBy, page);
 			const { listings, error } = await scrapePage(url);
-			all.push(...listings.map(l => ({ ...l, payment, property_type: propertyType })));
+			all.push(...listings.map(l => ({ ...l, transaction_type, property_type: propertyType })));
 			if (error) return { listings: all, error };
 			if (page < pages) await new Promise((r) => setTimeout(r, 1000));
 		}

@@ -4,18 +4,18 @@
 	type Listing = {
 		title: string; url: string; location: string; price: string;
 		features: string[]; bedrooms: string; size: string;
-		image: string; agency: string; payment: string; property_type: string;
+		image: string; agency: string; transaction_type: string; property_type: string;
 	};
 
 	const SOURCES = [
-		{ id: 'lexpress', name: "L'Express Property", payments: ['buy', 'rent', 'holiday'], propertyTypes: ['apartment', 'villa', 'house', 'land', 'office', 'penthouse'], sortable: true },
-		{ id: 'allysmu', name: "Ally's Real Estate", payments: ['buy', 'rent'], propertyTypes: ['any'], sortable: false },
-		{ id: '2futures', name: '2Futures', payments: ['buy'], propertyTypes: ['any'], sortable: false }
+		{ id: 'lexpress', name: "L'Express Property", transactionTypes: ['buy', 'rent', 'holiday'], propertyTypes: ['apartment', 'villa', 'house', 'land', 'office', 'penthouse'], sortable: true },
+		{ id: 'allysmu', name: "Ally's Real Estate", transactionTypes: ['buy', 'rent'], propertyTypes: ['any'], sortable: false },
+		{ id: '2futures', name: '2Futures', transactionTypes: ['buy'], propertyTypes: ['any'], sortable: false }
 	];
 
 	// ── Scraper state ──────────────────────────────────────
 	let source = $state('lexpress');
-	let payment = $state('buy');
+	let transactionType = $state('buy');
 	let propertyType = $state('apartment');
 	let sortBy = $state('most_recent');
 	let pages = $state(1);
@@ -47,7 +47,7 @@
 	// ── Scrape ────────────────────────────────────────────
 	async function scrape() {
 		scraping = true; scrapeResults = []; scrapeError = ''; saveState = {};
-		const params = new URLSearchParams({ source, payment, property_type: propertyType, sort_by: sortBy, pages: String(pages) });
+		const params = new URLSearchParams({ source, transaction_type: transactionType, property_type: propertyType, sort_by: sortBy, pages: String(pages) });
 		const r = await fetch(`/api/scrape?${params}`);
 		const d = await r.json();
 		scrapeResults = d.listings;
@@ -119,13 +119,13 @@
 		savedListings = savedListings.map(l => l.id === id ? { ...l, scheme } : l);
 	}
 
-	async function updateYearBuilt(id: number, year_built: string) {
+	async function updateAvailableFrom(id: number, available_from: string) {
 		await fetch(`/api/listings/${id}`, {
 			method: 'PATCH',
 			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({ year_built })
+			body: JSON.stringify({ available_from })
 		});
-		savedListings = savedListings.map(l => l.id === id ? { ...l, year_built } : l);
+		savedListings = savedListings.map(l => l.id === id ? { ...l, available_from } : l);
 	}
 
 	async function geocodeAll() {
@@ -202,8 +202,8 @@
 					</div>
 					<div>
 						<label class="form-label">Transaction</label>
-						<select bind:value={payment} class="form-input text-sm py-2">
-							{#each currentSource.payments as p}
+						<select bind:value={transactionType} class="form-input text-sm py-2">
+							{#each currentSource.transactionTypes as p}
 								<option value={p}>{p === 'buy' ? 'For Sale' : p === 'rent' ? 'For Rent' : 'Holiday'}</option>
 							{/each}
 						</select>
@@ -286,8 +286,8 @@
 								{:else}
 									<div class="w-full h-full flex items-center justify-center text-gray-300 text-xs">No image</div>
 								{/if}
-								<span class="absolute top-2 left-2 text-xs font-semibold px-2 py-1 rounded-full {listing.payment === 'rent' ? 'bg-[#2d6a4f] text-white' : 'bg-[#0077b6] text-white'}">
-									{listing.payment === 'rent' ? 'Rent' : 'Sale'}
+								<span class="absolute top-2 left-2 text-xs font-semibold px-2 py-1 rounded-full {listing.transaction_type === 'rent' ? 'bg-[#2d6a4f] text-white' : 'bg-[#0077b6] text-white'}">
+									{listing.transaction_type === 'rent' ? 'Rent' : 'Sale'}
 								</span>
 								{#if state === 'saved'}
 									<span class="absolute top-2 right-2 w-7 h-7 bg-[#2d6a4f] text-white rounded-full flex items-center justify-center text-sm shadow">✓</span>
@@ -359,8 +359,8 @@
 								{:else}
 									<div class="w-full h-full flex items-center justify-center text-gray-300 text-xs">No image</div>
 								{/if}
-								<span class="absolute top-2 left-2 text-xs font-semibold px-2 py-1 rounded-full {listing.payment === 'rent' ? 'bg-[#2d6a4f] text-white' : 'bg-[#0077b6] text-white'}">
-									{listing.payment === 'rent' ? 'Rent' : 'Sale'}
+								<span class="absolute top-2 left-2 text-xs font-semibold px-2 py-1 rounded-full {listing.transaction_type === 'rent' ? 'bg-[#2d6a4f] text-white' : 'bg-[#0077b6] text-white'}">
+									{listing.transaction_type === 'rent' ? 'Rent' : 'Sale'}
 								</span>
 								<button onclick={() => remove(listing.id)} class="absolute top-2 right-2 w-6 h-6 bg-red-500 text-white rounded-full text-xs hover:bg-red-600 transition-colors flex items-center justify-center">✕</button>
 							</div>

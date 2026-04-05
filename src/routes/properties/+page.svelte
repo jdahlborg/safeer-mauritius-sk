@@ -12,7 +12,7 @@
 
 	// Initialise from URL params (set by homepage search form)
 	let tab = $state<'all' | 'buy' | 'rent'>(
-		(page.url.searchParams.get('payment') as 'buy' | 'rent') ?? 'all'
+		(page.url.searchParams.get('transaction_type') as 'buy' | 'rent') ?? 'all'
 	);
 	let filterQ = $state(page.url.searchParams.get('q') ?? '');
 	let filterType = $state(page.url.searchParams.get('type') ?? '');
@@ -31,7 +31,7 @@
 
 	const filtered = $derived(
 		listings.filter(l => {
-			if (tab !== 'all' && l.payment !== tab) return false;
+			if (tab !== 'all' && l.transaction_type !== tab) return false;
 			if (filterType && l.property_type !== filterType) return false;
 			if (filterScheme && l.scheme !== filterScheme) return false;
 			if (filterQ) {
@@ -174,8 +174,8 @@
 								</div>
 							{/if}
 							<div class="absolute top-3 left-3 flex gap-1">
-								<span class="text-xs font-semibold px-2 py-1 rounded-full {l.payment === 'rent' ? 'bg-[#2d6a4f] text-white' : 'bg-[#0077b6] text-white'}">
-									{l.payment === 'rent' ? ts('card_for_rent') : ts('card_for_sale')}
+								<span class="text-xs font-semibold px-2 py-1 rounded-full {l.transaction_type === 'rent' ? 'bg-[#2d6a4f] text-white' : 'bg-[#0077b6] text-white'}">
+									{l.transaction_type === 'rent' ? ts('card_for_rent') : ts('card_for_sale')}
 								</span>
 								{#if l.scheme}
 									<span class="text-xs font-semibold px-2 py-1 rounded-full bg-[#c9a96e] text-white">{l.scheme}</span>

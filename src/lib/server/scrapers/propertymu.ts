@@ -65,7 +65,7 @@ async function scrapePage(url: string, payment: string): Promise<ScrapeResult> {
 		}
 
 		prop.agency = $(card).find('.agency, .agent-name, [class*="agency"]').first().text().trim();
-		prop.payment = payment;
+		prop.transaction_type = payment;
 		prop.property_type = '';
 
 		if (prop.title || prop.price) {
@@ -81,12 +81,12 @@ export const propertyMuSource: ScraperSource = {
 	name: 'Property.mu',
 	url: 'https://www.property.mu',
 	filters: {
-		payment: ['buy', 'rent'],
+		transaction_type: ['buy', 'rent'],
 		propertyType: ['any'],
 		sortBy: ['most_recent']
 	},
-	async collect({ payment, pages }: ScrapeOptions): Promise<ScrapeResult> {
-		const path = PAYMENT_PATHS[payment.toLowerCase()] ?? '/for-sale';
+	async collect({ transaction_type, pages }: ScrapeOptions): Promise<ScrapeResult> {
+		const path = PAYMENT_PATHS[transaction_type.toLowerCase()] ?? '/for-sale';
 		const all: Listing[] = [];
 		for (let page = 1; page <= pages; page++) {
 			const url = `${BASE_URL}${path}?page=${page}`;

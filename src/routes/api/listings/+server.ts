@@ -1,13 +1,13 @@
 import { json } from '@sveltejs/kit';
-import { getSaved, saveListing, updateListingCoords } from '$lib/server/db';
+import { getListings, saveListing, updateListingCoords } from '$lib/server/db';
 import { geocodeLocation } from '$lib/server/geocode';
 import type { RequestHandler } from './$types';
 
 export const GET: RequestHandler = async ({ url }) => {
 	const search = url.searchParams.get('search') ?? '';
 	const property_type = url.searchParams.get('property_type') ?? '';
-	const payment = url.searchParams.get('payment') ?? '';
-	const listings = await getSaved(search, property_type, payment);
+	const transaction_type = url.searchParams.get('transaction_type') ?? '';
+	const listings = await getListings(search, property_type, transaction_type);
 	return json({ listings, count: listings.length });
 };
 
