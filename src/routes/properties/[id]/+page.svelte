@@ -2,6 +2,20 @@
 	import type { PageData } from './$types';
 	let { data }: { data: PageData } = $props();
 	const l = data.listing;
+	const user = data.user;
+
+	let favorited = $state(data.favorited ?? false);
+
+	async function toggleFav() {
+		if (!user) { window.location.href = '/login'; return; }
+		favorited = !favorited; // optimistic
+		const res = await fetch('/api/favorites', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ listingId: l.id })
+		});
+		if (!res.ok) favorited = !favorited; // revert on error
+	}
 
 	const SOURCE_NAMES: Record<string, string> = {
 		lexpress: "L'Express Property",
@@ -255,7 +269,12 @@
 
 				<!-- Price card -->
 				<div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 sticky top-24">
-					<p class="text-2xl font-bold text-[#0077b6] mb-1" style="font-family:'Playfair Display',serif">{l.price || 'Price on request'}</p>
+					<div class="flex items-start justify-between gap-2 mb-1">
+						<p class="text-2xl font-bold text-[#0077b6]" style="font-family:'Playfair Display',serif">{l.price || 'Price on request'}</p>
+						<button onclick={toggleFav} title={favorited ? 'Remove from favourites' : 'Save to favourites'} class="flex-shrink-0 w-10 h-10 rounded-full border-2 flex items-center justify-center transition-all {favorited ? 'border-red-400 bg-red-50' : 'border-gray-200 hover:border-red-300'}">
+							{#if favorited}<svg class="w-5 h-5 text-red-500" fill="currentColor" viewBox="0 0 24 24"><path d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg>{:else}<svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg>{/if}
+						</button>
+					</div>
 					{#if l.bedrooms || l.size}
 						<p class="text-sm text-gray-500 mb-5">{[l.bedrooms, l.size].filter(Boolean).join(' · ')}</p>
 					{:else}

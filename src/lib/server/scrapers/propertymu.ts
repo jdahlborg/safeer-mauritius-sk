@@ -90,7 +90,7 @@ export const propertyMuSource: ScraperSource = {
 		const all: Listing[] = [];
 		for (let page = 1; page <= pages; page++) {
 			const url = `${BASE_URL}${path}?page=${page}`;
-			const { listings, error } = await scrapePage(url, payment);
+			const { listings, error } = await scrapePage(url, transaction_type);
 			all.push(...listings);
 			if (error && page === 1) return { listings: all, error };
 			if (page < pages) await new Promise((r) => setTimeout(r, 1000));

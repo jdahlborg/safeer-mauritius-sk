@@ -9,6 +9,33 @@
 	let { data }: { data: PageData } = $props();
 
 	const listings = data.listings;
+	const user = data.user;
+
+	// Track favorite state client-side so toggling is instant
+	let favoriteIds = $state(new Set<number>(data.favoriteIds ?? []));
+
+	async function toggleFavorite(e: MouseEvent, listingId: number) {
+		e.preventDefault();
+		e.stopPropagation();
+		if (!user) {
+			window.location.href = '/login';
+			return;
+		}
+		// Optimistic update
+		const wasFav = favoriteIds.has(listingId);
+		if (wasFav) favoriteIds.delete(listingId); else favoriteIds.add(listingId);
+		favoriteIds = new Set(favoriteIds); // trigger reactivity
+		const res = await fetch('/api/favorites', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ listingId })
+		});
+		if (!res.ok) {
+			// Revert on error
+			if (wasFav) favoriteIds.add(listingId); else favoriteIds.delete(listingId);
+			favoriteIds = new Set(favoriteIds);
+		}
+	}
 
 	// Initialise from URL params (set by homepage search form)
 	let tab = $state<'all' | 'buy' | 'rent'>(
@@ -52,7 +79,7 @@
 		})
 	);
 
-	const mappable = $derived(filtered.filter(l => l.lat != null && l.lng != null));
+	const mappable = $derived(filtered.filter(l => l.lat != null && l.lng != null) as (typeof filtered[number] & { lat: number; lng: number })[]);
 
 	function clearFilters() {
 		tab = 'all'; filterQ = ''; filterType = ''; filterScheme = ''; filterMinBeds = ''; filterRegion = null; activeRegion = null;
@@ -181,8 +208,20 @@
 									<span class="text-xs font-semibold px-2 py-1 rounded-full bg-[#c9a96e] text-white">{l.scheme}</span>
 								{/if}
 							</div>
+							<!-- Heart button -->
+							<button
+								onclick={(e) => toggleFavorite(e, l.id)}
+								title={favoriteIds.has(l.id) ? 'Remove from favourites' : 'Save to favourites'}
+								class="absolute top-3 right-3 w-8 h-8 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center shadow-sm hover:scale-110 transition-transform z-10"
+							>
+								{#if favoriteIds.has(l.id)}
+									<svg class="w-4 h-4 text-red-500" fill="currentColor" viewBox="0 0 24 24"><path d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg>
+								{:else}
+									<svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg>
+								{/if}
+							</button>
 							{#if l.property_type}
-								<span class="absolute top-3 right-3 text-xs font-medium px-2 py-1 rounded-full bg-black/40 text-white backdrop-blur-sm">{l.property_type}</span>
+								<span class="absolute bottom-3 left-3 text-xs font-medium px-2 py-1 rounded-full bg-black/40 text-white backdrop-blur-sm">{l.property_type}</span>
 							{/if}
 						</div>
 						<div class="p-4 flex flex-col flex-1">

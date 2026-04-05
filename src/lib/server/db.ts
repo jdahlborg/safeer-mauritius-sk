@@ -79,7 +79,172 @@ export async function initDb() {
 		END $$
 	`;
 
+	// ── User / session / favorites tables ───────────────────────────────────
+	await sql`
+		CREATE TABLE IF NOT EXISTS users (
+			id         SERIAL PRIMARY KEY,
+			email      TEXT UNIQUE NOT NULL,
+			name       TEXT DEFAULT '',
+			created_at TIMESTAMPTZ DEFAULT NOW()
+		)
+	`;
+	await sql`
+		CREATE TABLE IF NOT EXISTS sessions (
+			token      TEXT PRIMARY KEY,
+			user_id    INTEGER REFERENCES users(id) ON DELETE CASCADE,
+			expires_at TIMESTAMPTZ NOT NULL,
+			created_at TIMESTAMPTZ DEFAULT NOW()
+		)
+	`;
+	await sql`
+		CREATE TABLE IF NOT EXISTS magic_links (
+			token      TEXT PRIMARY KEY,
+			email      TEXT NOT NULL,
+			expires_at TIMESTAMPTZ NOT NULL,
+			used       BOOLEAN DEFAULT false
+		)
+	`;
+	await sql`
+		CREATE TABLE IF NOT EXISTS favorites (
+			id         SERIAL PRIMARY KEY,
+			user_id    INTEGER REFERENCES users(id) ON DELETE CASCADE,
+			listing_id INTEGER REFERENCES listings(id) ON DELETE CASCADE,
+			created_at TIMESTAMPTZ DEFAULT NOW(),
+			UNIQUE(user_id, listing_id)
+		)
+	`;
+
 	await sql.end();
+}
+
+// ── User types ────────────────────────────────────────────────────────────────
+
+export interface User {
+	id: number;
+	email: string;
+	name: string;
+	created_at: string;
+}
+
+export async function getOrCreateUser(email: string, name = ''): Promise<User> {
+	const sql = getClient();
+	try {
+		const existing = await sql`SELECT * FROM users WHERE email = ${email}`;
+		if (existing.length) return existing[0] as unknown as User;
+		const rows = await sql`INSERT INTO users (email, name) VALUES (${email}, ${name}) RETURNING *`;
+		return rows[0] as unknown as User;
+	} finally {
+		await sql.end();
+	}
+}
+
+export async function createSession(userId: number): Promise<string> {
+	const sql = getClient();
+	const { randomBytes } = await import('node:crypto');
+	const token = randomBytes(32).toString('hex');
+	const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days
+	try {
+		await sql`INSERT INTO sessions (token, user_id, expires_at) VALUES (${token}, ${userId}, ${expiresAt})`;
+		return token;
+	} finally {
+		await sql.end();
+	}
+}
+
+export async function validateSession(token: string): Promise<User | null> {
+	const sql = getClient();
+	try {
+		const rows = await sql`
+			SELECT u.* FROM sessions s
+			JOIN users u ON u.id = s.user_id
+			WHERE s.token = ${token} AND s.expires_at > NOW()
+		`;
+		return rows.length ? rows[0] as unknown as User : null;
+	} finally {
+		await sql.end();
+	}
+}
+
+export async function deleteSession(token: string): Promise<void> {
+	const sql = getClient();
+	try {
+		await sql`DELETE FROM sessions WHERE token = ${token}`;
+	} finally {
+		await sql.end();
+	}
+}
+
+export async function createMagicLink(email: string): Promise<string> {
+	const sql = getClient();
+	const { randomBytes } = await import('node:crypto');
+	const token = randomBytes(32).toString('hex');
+	const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
+	try {
+		// Invalidate any existing unused tokens for this email
+		await sql`DELETE FROM magic_links WHERE email = ${email} AND used = false`;
+		await sql`INSERT INTO magic_links (token, email, expires_at) VALUES (${token}, ${email}, ${expiresAt})`;
+		return token;
+	} finally {
+		await sql.end();
+	}
+}
+
+export async function verifyMagicLink(token: string): Promise<string | null> {
+	const sql = getClient();
+	try {
+		const rows = await sql`
+			SELECT email FROM magic_links
+			WHERE token = ${token} AND expires_at > NOW() AND used = false
+		`;
+		if (!rows.length) return null;
+		await sql`UPDATE magic_links SET used = true WHERE token = ${token}`;
+		return rows[0].email as string;
+	} finally {
+		await sql.end();
+	}
+}
+
+// ── Favorites ─────────────────────────────────────────────────────────────────
+
+export async function getFavoriteIds(userId: number): Promise<Set<number>> {
+	const sql = getClient();
+	try {
+		const rows = await sql`SELECT listing_id FROM favorites WHERE user_id = ${userId}`;
+		return new Set(rows.map(r => r.listing_id as number));
+	} finally {
+		await sql.end();
+	}
+}
+
+export async function toggleFavorite(userId: number, listingId: number): Promise<boolean> {
+	const sql = getClient();
+	try {
+		const existing = await sql`SELECT id FROM favorites WHERE user_id = ${userId} AND listing_id = ${listingId}`;
+		if (existing.length) {
+			await sql`DELETE FROM favorites WHERE user_id = ${userId} AND listing_id = ${listingId}`;
+			return false; // removed
+		} else {
+			await sql`INSERT INTO favorites (user_id, listing_id) VALUES (${userId}, ${listingId})`;
+			return true; // added
+		}
+	} finally {
+		await sql.end();
+	}
+}
+
+export async function getFavoriteListings(userId: number): Promise<SavedListing[]> {
+	const sql = getClient();
+	try {
+		const rows = await sql`
+			SELECT l.* FROM listings l
+			JOIN favorites f ON f.listing_id = l.id
+			WHERE f.user_id = ${userId}
+			ORDER BY f.created_at DESC
+		`;
+		return rows.map(r => parseRow(r as Record<string, unknown>));
+	} finally {
+		await sql.end();
+	}
 }
 
 export interface SavedListing {

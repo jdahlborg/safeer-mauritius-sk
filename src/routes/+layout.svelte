@@ -4,13 +4,14 @@
 	import Footer from '$lib/components/Footer.svelte';
 	import { onMount } from 'svelte';
 	import { initLocale } from '$lib/locale.svelte';
+	import type { LayoutData } from './$types';
 
-	let { children } = $props();
+	let { children, data }: { children: any; data: LayoutData } = $props();
 
 	onMount(() => initLocale());
 </script>
 
-<Nav />
+<Nav user={data.user} />
 <main>
 	{@render children()}
 </main>
