@@ -35,7 +35,7 @@
 	</div>
 
 	<!-- Content pushed below both navbars -->
-	<div class="pt-[104px]">
+	<div class="pt-[128px]">
 		{@render children()}
 	</div>
 </div>
