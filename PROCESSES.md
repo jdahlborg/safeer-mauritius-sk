@@ -1,80 +1,113 @@
 # Safeer Properties — Website Processes
 
-## 1. Property Search (Visitor)
+This document describes the current live flows in the app (visitor, partner, and admin).
 
-1. Visitor lands on homepage and uses the search card: selects Buy or Rent, optionally enters a keyword, property type, and minimum bedrooms.
-2. Search redirects to `/properties` with URL params pre-filling the filters.
-3. On the listings page, visitor refines results using the sticky filter bar: Buy/Rent/All toggle, keyword, property type, min bedrooms, region (North/South/West/Center/East), and scheme (PDS/IRS/RES etc.).
-4. Listings are filtered in real-time client-side. A map panel on the right shows geocoded listings; hovering a card highlights the pin and vice versa.
-5. Visitor clicks a listing card to go to `/properties/[id]` for the full detail page.
+## 1) Property discovery flow (visitor)
 
-## 2. Contact / Lead Submission (Visitor)
+1. Visitor lands on `/` and uses the search card (buy/rent, keyword, type, min bedrooms).
+2. The app redirects to `/properties` with query params (`transaction_type`, `q`, `type`, `minBeds`).
+3. On `/properties`, filters are applied client-side in real time:
+   - buy/rent/all toggle
+   - keyword
+   - property type
+   - min bedrooms
+   - region (North/South/West/Center/East)
+   - scheme (when available on listings)
+4. Listing cards and the map are linked; hover/select states sync between card and marker.
+5. Clicking a card opens `/properties/[id]` for the full listing detail page.
 
-1. Visitor fills in the contact form on the homepage (`#contact` section): name, email, phone/WhatsApp, interest area, and a free-text message.
-2. Form submits to `POST /api/contact` which sends a transactional email via Resend.
-3. A toast confirmation is shown; Safeer team responds within 24 hours.
-4. A floating WhatsApp button is always visible for direct chat.
+## 2) Favorites flow (logged-in users)
 
-## 3. Partner Application (Agency / Developer)
+1. User clicks heart icon on listing cards or on a listing detail page.
+2. If not signed in, user is redirected to `/login`.
+3. If signed in, UI updates optimistically and sends `POST /api/favorites` with `listingId`.
+4. API toggles favorite state in the `favorites` table and returns `{ ok, favorited }`.
+5. If request fails, UI rolls back to previous state.
 
-1. Agency or developer visits `/partners` to learn about the program and review the buyer audience profile and pricing tiers.
-2. Clicks "Get Started as a Partner" and fills in the application form at the bottom of the page: name, company, email, phone, partner type, portfolio description, and agreement to partner terms.
-3. Form submits via SvelteKit form action (`POST /partners`), which:
-   - Saves the application to the `partners` table in PostgreSQL.
-   - Sends a confirmation email to the applicant via Resend with their application summary and a link to the full partner terms.
-4. A success state is shown in-page. Safeer admin reviews and follows up within one business day.
-5. Partner terms are available at `/partners/terms`.
+## 3) Contact / lead flow (homepage)
 
-## 4. Admin: Scraping Listings (Admin)
+1. Visitor fills the contact section on `/` and submits.
+2. Frontend posts to `POST /api/contact`.
+3. Current server behavior: request data is logged server-side and `{ ok: true }` is returned.
+4. WhatsApp CTA remains available for direct chat.
 
-The admin dashboard is at `/admin` (protected by `ADMIN_SECRET`).
+Note: this endpoint currently does not send transactional email.
 
-### Standard scrapers (Cheerio-based)
-1. Admin selects a source (L'Express Property, Ally's Real Estate, or 2Futures), transaction type, property type, sort order, and number of pages.
-2. Clicks "Scrape Listings" which calls `GET /api/scrape` with the chosen params.
-3. The server-side scraper (Cheerio) fetches the portal HTML and parses listing data.
-4. Results appear as cards. Admin can save individual listings or click "Save All".
-5. Saving calls `POST /api/listings`, which inserts into the `saved_listings` table. Duplicates (same URL) are detected and flagged.
+## 4) Partner application flow (`/partners`)
 
-### AI scraper (partner sites)
-- `POST /api/scrape/partner` accepts a `websiteUrl` and `agency` name.
-- The scraper fetches the HTML, strips noise with Cheerio, then passes cleaned HTML to Claude Haiku.
-- Claude extracts structured listing data (title, price, location, bedrooms, size, images, scheme, payment type, URL) as a JSON array.
-- Pagination is followed automatically up to a configurable `maxPages` limit.
-- Results are deduplicated by URL before being returned.
+1. Agency/developer/agent fills partner form on `/partners`.
+2. Server action validates required fields (`name`, `company`, `email`) and terms acceptance.
+3. Application is persisted in PostgreSQL `partners` via `savePartner(...)`.
+4. Two Resend emails are sent:
+   - internal notification to `hello@safeer.mu`
+   - confirmation email to applicant
+5. UI returns success state; partner terms are available at `/partners/terms`.
 
-## 5. Admin: Managing Saved Listings
+## 5) Admin authentication gate
 
-On the "Saved" tab of `/admin`:
+1. Admin routes are behind `/admin` layout.
+2. Access is protected using `ADMIN_SECRET`.
+3. Main admin sections:
+   - `/admin` for listing scraping + saved listings ops
+   - `/admin/partners` for partner pipeline + partner-site AI scraping
 
-- Search saved listings by keyword.
-- Assign a property scheme (PDS, IRS, RES, G+2, Smart City) via a dropdown — saved via `PATCH /api/listings/[id]`.
-- Add/edit internal notes — saved on input via `PATCH /api/listings/[id]`.
-- Delete a listing with the red ✕ button (`DELETE /api/listings/[id]`).
-- Export all saved listings as JSON (`/api/export/json`) or CSV (`/api/export/csv`).
+## 6) Admin listing scraping (`/admin`)
 
-## 6. Admin: Geocoding
+### A. Standard portal scraping
 
-- Listings without coordinates (lat/lng) cannot appear on the map.
-- Clicking "Geocode All" on the admin dashboard calls `POST /api/geocode`.
-- The server iterates listings missing coordinates, calls the geocoding service with each listing's `location` string, and updates `lat`/`lng` in the database.
-- The results count (updated / total) is shown as a toast notification.
+1. Admin selects source (`lexpress`, `allysmu`, `2futures`), transaction type, property type, sorting, and pages.
+2. UI calls `GET /api/scrape`.
+3. Scraper returns normalized listing objects.
+4. Admin saves one-by-one or uses "Save All".
+5. Save calls `POST /api/listings`; duplicates by URL are flagged as "Already saved".
 
-## 7. Admin: Partner Management
+### B. Data persistence details
 
-At `/admin/partners`:
+- Listings are saved to table `listings` (legacy `saved_listings` is migrated/renamed).
+- On successful save, if coordinates are missing, background geocoding is triggered (fire-and-forget).
 
-- View all partner applications with their status, company, type, and contact details.
-- Update partner status (pending → approved / rejected) via the partner management interface.
-- Updates call `PATCH /api/partners/[id]`.
+## 7) Saved listings operations (`/admin` "Saved" tab)
 
-## 8. Services Pages
+- Search saved listings (`GET /api/listings?search=...`).
+- Update scheme via `PATCH /api/listings/[id]` with `scheme`.
+- Update internal notes via `PATCH /api/listings/[id]` with `notes`.
+- Update availability via `PATCH /api/listings/[id]` with `available_from`.
+- Delete listing via `DELETE /api/listings/[id]`.
+- Export all listings:
+  - JSON: `/api/export/json`
+  - CSV: `/api/export/csv`
 
-Static informational pages at `/services/[slug]`. Available service categories:
+## 8) Geocoding process
 
-- `visa-residency` — Premium Visa, Occupation Permit, Investor Permit, Retired Non-Citizen
-- `legal-financial` — company formation, tax planning, banking
-- `logistics` — international removals, customs, vehicle/pet import
-- `family-lifestyle` — schooling, healthcare, community
-- `remote-worker` — visa, co-working, SIM, bank, housing bundle
-- `housing` — deal negotiation, lease review, home setup
+1. Manual batch: admin clicks "Geocode All" -> `POST /api/geocode`.
+2. Server processes listings without `lat/lng` and geocodes by `location`.
+3. Rate limiting is respected (~1 request/sec).
+4. UI shows result counts (`updated` vs `total missing`).
+
+## 9) Partner management + partner AI scraping (`/admin/partners`)
+
+### A. Partner pipeline management
+
+- View all partner records and status (`pending`, `active`, `rejected`).
+- Update status/notes/website via `PATCH /api/partners/[id]`.
+- Delete partner via `DELETE /api/partners/[id]`.
+- Add partner manually via `POST /api/partners`.
+
+### B. Partner website AI scraping
+
+1. Admin sets a partner website URL in partner record.
+2. Admin starts scrape from panel -> `GET /api/scrape/partner?partner_id=...&pages=...`.
+3. Backend loads partner URL, then runs AI scraper (Claude Haiku + HTML cleaning/parsing).
+4. Results are shown in panel and can be saved individually or "Save All" to `/api/listings`.
+5. Saved partner listings use generated source IDs like `partner_company_name`.
+
+## 10) Services pages
+
+Static service pages exist at `/services/[slug]`:
+
+- `visa-residency`
+- `legal-financial`
+- `logistics`
+- `family-lifestyle`
+- `remote-worker`
+- `housing`
