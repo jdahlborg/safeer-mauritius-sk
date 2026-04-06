@@ -1,417 +1,140 @@
 <script lang="ts">
-	import type { SavedListing } from '$lib/server/db';
+  import type { PageData } from './$types';
+  let { data }: { data: PageData } = $props();
 
-	type Listing = {
-		title: string; url: string; location: string; price: string;
-		features: string[]; bedrooms: string; size: string;
-		image: string; agency: string; transaction_type: string; property_type: string;
-	};
+  let recentLeads = $state(data.recentLeads);
+  let stats = $state(data.stats);
+  let toast = $state('');
 
-	const SOURCES = [
-		{ id: 'lexpress', name: "L'Express Property", transactionTypes: ['buy', 'rent', 'holiday'], propertyTypes: ['apartment', 'villa', 'house', 'land', 'office', 'penthouse'], sortable: true },
-		{ id: 'allysmu', name: "Ally's Real Estate", transactionTypes: ['buy', 'rent'], propertyTypes: ['any'], sortable: false },
-		{ id: '2futures', name: '2Futures', transactionTypes: ['buy'], propertyTypes: ['any'], sortable: false }
-	];
+  function showToast(msg: string) {
+    toast = msg;
+    setTimeout(() => (toast = ''), 3000);
+  }
 
-	// ── Scraper state ──────────────────────────────────────
-	let source = $state('lexpress');
-	let transactionType = $state('buy');
-	let propertyType = $state('apartment');
-	let sortBy = $state('most_recent');
-	let pages = $state(1);
-	let scraping = $state(false);
-	let scrapeResults = $state<Listing[]>([]);
-	let scrapeError = $state('');
+  async function markRead(id: number) {
+    await fetch(`/api/leads/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ read: true }) });
+    recentLeads = recentLeads.map(l => l.id === id ? { ...l, read: true } : l);
+    stats = { ...stats, unreadLeads: Math.max(0, stats.unreadLeads - 1) };
+    showToast('Marked as read');
+  }
 
-	// Track save state per listing URL: 'idle' | 'saving' | 'saved' | 'duplicate'
-	let saveState = $state<Record<string, 'saving' | 'saved' | 'duplicate'>>({});
-	let savingAll = $state(false);
+  const statCards = $derived([
+    { label: 'Total Listings', value: stats.totalListings, color: 'text-[#0077b6]', bg: 'bg-blue-50', border: 'border-blue-200' },
+    { label: 'Active Listings', value: stats.activeListings, color: 'text-[#2d6a4f]', bg: 'bg-green-50', border: 'border-green-200' },
+    { label: 'Sold / Rented', value: stats.soldListings, color: 'text-gray-600', bg: 'bg-gray-50', border: 'border-gray-200' },
+    { label: 'Active Partners', value: stats.activePartners, color: 'text-[#0077b6]', bg: 'bg-blue-50', border: 'border-blue-200' },
+    { label: 'Pending Partners', value: stats.pendingPartners, color: 'text-amber-600', bg: 'bg-amber-50', border: 'border-amber-200' },
+    { label: 'Unread Leads', value: stats.unreadLeads, color: 'text-red-600', bg: 'bg-red-50', border: 'border-red-200' },
+  ]);
 
-	let currentSource = $derived(SOURCES.find(s => s.id === source) ?? SOURCES[0]);
-	let savedCount = $derived(Object.values(saveState).filter(s => s === 'saved' || s === 'duplicate').length);
-
-	// ── Saved state ────────────────────────────────────────
-	let savedListings = $state<SavedListing[]>([]);
-	let savedSearch = $state('');
-	let activeTab = $state<'search' | 'saved'>('search');
-	let toast = $state('');
-
-	// ── Load saved on mount ────────────────────────────────
-	async function loadSaved() {
-		const params = new URLSearchParams({ search: savedSearch });
-		const r = await fetch(`/api/listings?${params}`);
-		const d = await r.json();
-		savedListings = d.listings;
-	}
-
-	// ── Scrape ────────────────────────────────────────────
-	async function scrape() {
-		scraping = true; scrapeResults = []; scrapeError = ''; saveState = {};
-		const params = new URLSearchParams({ source, transaction_type: transactionType, property_type: propertyType, sort_by: sortBy, pages: String(pages) });
-		const r = await fetch(`/api/scrape?${params}`);
-		const d = await r.json();
-		scrapeResults = d.listings;
-		if (d.error) scrapeError = d.error;
-		scraping = false;
-	}
-
-	// ── Save listing ──────────────────────────────────────
-	async function save(listing: Listing): Promise<boolean> {
-		saveState = { ...saveState, [listing.url]: 'saving' };
-		const r = await fetch('/api/listings', {
-			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({ ...listing, source })
-		});
-		const d = await r.json();
-		if (d.ok) {
-			saveState = { ...saveState, [listing.url]: 'saved' };
-			loadSaved();
-			return true;
-		} else {
-			const isDupe = (d.error ?? '').toLowerCase().includes('already');
-			saveState = { ...saveState, [listing.url]: isDupe ? 'duplicate' : 'saving' };
-			if (!isDupe) {
-				saveState = { ...saveState };
-				delete saveState[listing.url];
-			}
-			return false;
-		}
-	}
-
-	// ── Save all ──────────────────────────────────────────
-	async function saveAll() {
-		savingAll = true;
-		const unsaved = scrapeResults.filter(l => !saveState[l.url]);
-		let count = 0;
-		for (const listing of unsaved) {
-			const ok = await save(listing);
-			if (ok) count++;
-			await new Promise(r => setTimeout(r, 150)); // small delay to avoid hammering
-		}
-		savingAll = false;
-		showToast(`${count} listing${count !== 1 ? 's' : ''} saved`);
-	}
-
-	// ── Delete listing ────────────────────────────────────
-	async function remove(id: number) {
-		await fetch(`/api/listings/${id}`, { method: 'DELETE' });
-		savedListings = savedListings.filter(l => l.id !== id);
-		showToast('Removed');
-	}
-
-	// ── Update notes ──────────────────────────────────────
-	async function updateNotes(id: number, notes: string) {
-		await fetch(`/api/listings/${id}`, {
-			method: 'PATCH',
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({ notes })
-		});
-	}
-
-	// ── Update scheme ──────────────────────────────────────
-	async function updateScheme(id: number, scheme: string) {
-		await fetch(`/api/listings/${id}`, {
-			method: 'PATCH',
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({ scheme })
-		});
-		savedListings = savedListings.map(l => l.id === id ? { ...l, scheme } : l);
-	}
-
-	async function updateAvailableFrom(id: number, available_from: string) {
-		await fetch(`/api/listings/${id}`, {
-			method: 'PATCH',
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({ available_from })
-		});
-		savedListings = savedListings.map(l => l.id === id ? { ...l, available_from } : l);
-	}
-
-	async function geocodeAll() {
-		showToast('Geocoding... this may take a few minutes');
-		const r = await fetch('/api/geocode', { method: 'POST' });
-		const d = await r.json();
-		showToast(`Geocoded ${d.updated} of ${d.total} listings`);
-		loadSaved();
-	}
-
-	function showToast(msg: string) {
-		toast = msg;
-		setTimeout(() => (toast = ''), 3000);
-	}
-
-	// Load saved on initial render
-	$effect(() => {
-		loadSaved();
-	});
+  function fmtDate(d: string) {
+    return new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+  }
 </script>
 
 <svelte:head>
-	<title>Property Dashboard — Safeer Properties</title>
+  <title>Dashboard — Safeer Admin</title>
 </svelte:head>
 
-<div class="pb-16">
-	<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
 
-		<!-- Header -->
-		<div class="mb-8 flex items-center justify-between">
-			<div>
-				<h1 class="text-3xl font-bold text-gray-900" style="font-family:'Playfair Display',serif">Property Dashboard</h1>
-				<p class="text-gray-500 text-sm mt-1">Scrape Mauritius property portals and manage saved listings</p>
-			</div>
-			<div class="flex gap-3">
-				<button onclick={geocodeAll} class="btn-outline text-sm px-4 py-2">Geocode All</button>
-				<a href="/api/export/json" class="btn-outline text-sm px-4 py-2">Export JSON</a>
-				<a href="/api/export/csv" class="btn-outline text-sm px-4 py-2">Export CSV</a>
-			</div>
-		</div>
+  <!-- Header -->
+  <div class="mb-8">
+    <h1 class="text-3xl font-bold text-gray-900" style="font-family:'Playfair Display',serif">Dashboard</h1>
+    <p class="text-gray-500 text-sm mt-1">Overview of listings, partners and leads</p>
+  </div>
 
-		<!-- Tabs -->
-		<div class="flex gap-1 mb-6 border-b border-gray-200">
-			<button
-				onclick={() => (activeTab = 'search')}
-				class="px-5 py-3 text-sm font-medium border-b-2 transition-colors"
-				class:border-[#0077b6]={activeTab === 'search'}
-				class:text-[#0077b6]={activeTab === 'search'}
-				class:border-transparent={activeTab !== 'search'}
-				class:text-gray-500={activeTab !== 'search'}
-			>Search &amp; Scrape</button>
-			<button
-				onclick={() => { activeTab = 'saved'; loadSaved(); }}
-				class="px-5 py-3 text-sm font-medium border-b-2 transition-colors"
-				class:border-[#0077b6]={activeTab === 'saved'}
-				class:text-[#0077b6]={activeTab === 'saved'}
-				class:border-transparent={activeTab !== 'saved'}
-				class:text-gray-500={activeTab !== 'saved'}
-			>Saved ({savedListings.length})</button>
-		</div>
+  <!-- Stats grid -->
+  <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 mb-10">
+    {#each statCards as card}
+      <div class="rounded-2xl border-2 {card.bg} {card.border} p-4">
+        <div class="text-3xl font-bold {card.color}" style="font-family:'Playfair Display',serif">{card.value}</div>
+        <div class="text-xs {card.color} opacity-80 mt-1 leading-tight">{card.label}</div>
+      </div>
+    {/each}
+  </div>
 
-		<!-- ── SEARCH TAB ── -->
-		{#if activeTab === 'search'}
-			<!-- Filter bar -->
-			<div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-6">
-				<div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
-					<div>
-						<label class="form-label">Source</label>
-						<select bind:value={source} class="form-input text-sm py-2">
-							{#each SOURCES as s}
-								<option value={s.id}>{s.name}</option>
-							{/each}
-						</select>
-					</div>
-					<div>
-						<label class="form-label">Transaction</label>
-						<select bind:value={transactionType} class="form-input text-sm py-2">
-							{#each currentSource.transactionTypes as p}
-								<option value={p}>{p === 'buy' ? 'For Sale' : p === 'rent' ? 'For Rent' : 'Holiday'}</option>
-							{/each}
-						</select>
-					</div>
-					{#if currentSource.propertyTypes[0] !== 'any'}
-						<div>
-							<label class="form-label">Property Type</label>
-							<select bind:value={propertyType} class="form-input text-sm py-2">
-								{#each currentSource.propertyTypes as t}
-									<option value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</option>
-								{/each}
-							</select>
-						</div>
-					{/if}
-					{#if currentSource.sortable}
-						<div>
-							<label class="form-label">Sort By</label>
-							<select bind:value={sortBy} class="form-input text-sm py-2">
-								<option value="most_recent">Most Recent</option>
-								<option value="least_expensive">Cheapest</option>
-								<option value="most_expensive">Most Expensive</option>
-							</select>
-						</div>
-					{/if}
-					<div>
-						<label class="form-label">Pages</label>
-						<input type="number" bind:value={pages} min="1" max="5" class="form-input text-sm py-2" />
-					</div>
-					<div class="flex items-end">
-						<button onclick={scrape} disabled={scraping} class="btn-primary w-full py-2 text-sm disabled:opacity-60">
-							{scraping ? 'Scraping...' : 'Scrape Listings'}
-						</button>
-					</div>
-				</div>
-			</div>
+  <!-- Quick actions -->
+  <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-10">
+    <a href="/admin/listings" class="flex items-center gap-4 bg-white rounded-2xl border border-gray-100 shadow-sm p-5 hover:border-[#0077b6]/40 hover:shadow-md transition-all group">
+      <div class="w-10 h-10 rounded-xl bg-[#0077b6]/10 flex items-center justify-center shrink-0">
+        <svg class="w-5 h-5 text-[#0077b6]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"/></svg>
+      </div>
+      <div class="min-w-0">
+        <div class="font-semibold text-gray-900 text-sm">Listings</div>
+        <div class="text-xs text-gray-500 mt-0.5">Scrape &amp; manage properties</div>
+      </div>
+      <svg class="w-4 h-4 text-gray-300 ml-auto group-hover:text-[#0077b6] transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+    </a>
+    <a href="/admin/partners" class="flex items-center gap-4 bg-white rounded-2xl border border-gray-100 shadow-sm p-5 hover:border-[#2d6a4f]/40 hover:shadow-md transition-all group">
+      <div class="w-10 h-10 rounded-xl bg-[#2d6a4f]/10 flex items-center justify-center shrink-0">
+        <svg class="w-5 h-5 text-[#2d6a4f]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+      </div>
+      <div class="min-w-0">
+        <div class="font-semibold text-gray-900 text-sm">Partners</div>
+        <div class="text-xs text-gray-500 mt-0.5">Manage partner applications</div>
+      </div>
+      <svg class="w-4 h-4 text-gray-300 ml-auto group-hover:text-[#2d6a4f] transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+    </a>
+    <a href="/admin/leads" class="flex items-center gap-4 bg-white rounded-2xl border border-gray-100 shadow-sm p-5 hover:border-amber-400/50 hover:shadow-md transition-all group">
+      <div class="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center shrink-0">
+        <svg class="w-5 h-5 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+      </div>
+      <div class="min-w-0">
+        <div class="font-semibold text-gray-900 text-sm">Leads</div>
+        <div class="text-xs text-gray-500 mt-0.5">{stats.unreadLeads} unread enquiries</div>
+      </div>
+      <svg class="w-4 h-4 text-gray-300 ml-auto group-hover:text-amber-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+    </a>
+  </div>
 
-			{#if scrapeError}
-				<div class="bg-red-50 border border-red-200 text-red-700 rounded-xl px-4 py-3 text-sm mb-6">{scrapeError}</div>
-			{/if}
+  <!-- Recent Leads -->
+  <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+    <div class="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+      <h2 class="font-bold text-gray-900">Recent Leads</h2>
+      <a href="/admin/leads" class="text-sm text-[#0077b6] hover:underline">View all →</a>
+    </div>
+    {#if recentLeads.length === 0}
+      <div class="text-center py-16 text-gray-400">
+        <svg class="w-10 h-10 mx-auto mb-3 opacity-30" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+        <p class="text-sm">No leads yet</p>
+      </div>
+    {:else}
+      <div class="divide-y divide-gray-50">
+        {#each recentLeads as lead}
+          <div class="px-6 py-4 flex items-start gap-4 {lead.read ? 'opacity-70' : ''}">
+            <div class="w-9 h-9 rounded-full bg-[#0077b6]/10 flex items-center justify-center text-[#0077b6] font-bold text-sm shrink-0">
+              {lead.name ? lead.name[0].toUpperCase() : lead.email[0].toUpperCase()}
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="flex flex-wrap items-center gap-2 mb-0.5">
+                <span class="font-semibold text-sm text-gray-900">{lead.name || '—'}</span>
+                <a href="mailto:{lead.email}" class="text-xs text-[#0077b6] hover:underline">{lead.email}</a>
+                {#if lead.phone}<span class="text-xs text-gray-500">{lead.phone}</span>{/if}
+                <span class="text-xs px-2 py-0.5 rounded-full {lead.source === 'listing' ? 'bg-blue-100 text-blue-700' : lead.source === 'partner' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}">{lead.source}</span>
+                {#if !lead.read}<span class="text-xs px-2 py-0.5 rounded-full bg-red-100 text-red-600 font-medium">New</span>{/if}
+              </div>
+              {#if lead.message}
+                <p class="text-xs text-gray-500 line-clamp-2 mt-0.5">{lead.message}</p>
+              {/if}
+              {#if (lead as any).listing_title}
+                <p class="text-xs text-gray-400 mt-0.5">Re: {(lead as any).listing_title}</p>
+              {/if}
+            </div>
+            <div class="shrink-0 text-right">
+              <p class="text-xs text-gray-400 mb-1.5">{fmtDate(lead.created_at)}</p>
+              {#if !lead.read}
+                <button onclick={() => markRead(lead.id)} class="text-xs px-2.5 py-1 rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors">Mark read</button>
+              {/if}
+            </div>
+          </div>
+        {/each}
+      </div>
+    {/if}
+  </div>
 
-			{#if scraping}
-				<div class="text-center py-20 text-gray-400">
-					<div class="animate-spin w-8 h-8 border-2 border-[#0077b6] border-t-transparent rounded-full mx-auto mb-4"></div>
-					Fetching listings from {currentSource.name}...
-				</div>
-			{:else if scrapeResults.length === 0 && !scrapeError}
-				<div class="text-center py-20 text-gray-400">
-					<p class="text-lg font-medium">No results yet</p>
-					<p class="text-sm mt-1">Set your filters and click Scrape Listings</p>
-				</div>
-			{:else}
-				<div class="flex items-center justify-between mb-4">
-					<p class="text-sm text-gray-500">
-						{scrapeResults.length} listing{scrapeResults.length !== 1 ? 's' : ''} found
-						{#if savedCount > 0}
-							<span class="ml-2 text-[#2d6a4f] font-medium">· {savedCount} saved</span>
-						{/if}
-					</p>
-					<button
-						onclick={saveAll}
-						disabled={savingAll || scrapeResults.every(l => saveState[l.url])}
-						class="text-sm px-4 py-2 rounded-lg bg-[#2d6a4f] text-white font-medium hover:bg-[#245a40] disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
-					>
-						{#if savingAll}
-							<span class="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-							Saving…
-						{:else}
-							Save All
-						{/if}
-					</button>
-				</div>
-				<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-					{#each scrapeResults as listing}
-						{@const state = saveState[listing.url]}
-						<div class="bg-white rounded-2xl overflow-hidden shadow-sm border transition-all duration-200 flex flex-col
-							{state === 'saved' ? 'border-[#2d6a4f] ring-1 ring-[#2d6a4f]/30' : state === 'duplicate' ? 'border-gray-300 opacity-70' : 'border-gray-100'}">
-							<div class="relative h-44 bg-gray-100">
-								{#if listing.image}
-									<img src={listing.image} alt={listing.title} class="w-full h-full object-cover" loading="lazy" />
-								{:else}
-									<div class="w-full h-full flex items-center justify-center text-gray-300 text-xs">No image</div>
-								{/if}
-								<span class="absolute top-2 left-2 text-xs font-semibold px-2 py-1 rounded-full {listing.transaction_type === 'rent' ? 'bg-[#2d6a4f] text-white' : 'bg-[#0077b6] text-white'}">
-									{listing.transaction_type === 'rent' ? 'Rent' : 'Sale'}
-								</span>
-								{#if state === 'saved'}
-									<span class="absolute top-2 right-2 w-7 h-7 bg-[#2d6a4f] text-white rounded-full flex items-center justify-center text-sm shadow">✓</span>
-								{:else if state === 'duplicate'}
-									<span class="absolute top-2 right-2 text-xs bg-gray-600 text-white px-2 py-0.5 rounded-full">Saved</span>
-								{/if}
-							</div>
-							<div class="p-4 flex flex-col flex-1">
-								<h3 class="font-semibold text-gray-900 text-sm leading-snug mb-1 line-clamp-2">{listing.title}</h3>
-								<p class="text-gray-500 text-xs mb-2">{listing.location}</p>
-								{#if listing.features.length}
-									<div class="flex flex-wrap gap-1 mb-2">
-										{#each listing.features.slice(0, 3) as f}
-											<span class="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">{f}</span>
-										{/each}
-									</div>
-								{/if}
-								<p class="font-bold text-[#0077b6] mt-auto mb-3">{listing.price}</p>
-								<div class="flex gap-2">
-									<a href={listing.url} target="_blank" rel="noopener noreferrer" class="flex-1 text-center text-xs py-2 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors">View</a>
-									<button
-										onclick={() => save(listing)}
-										disabled={!!state}
-										class="flex-1 text-xs py-2 rounded-lg transition-colors flex items-center justify-center gap-1 disabled:cursor-not-allowed
-											{state === 'saved' ? 'bg-[#2d6a4f] text-white' : state === 'duplicate' ? 'bg-gray-200 text-gray-500' : state === 'saving' ? 'bg-[#0077b6]/60 text-white' : 'bg-[#0077b6] text-white hover:bg-[#005f8a]'}"
-									>
-										{#if state === 'saving'}
-											<span class="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-										{:else if state === 'saved'}
-											✓ Saved
-										{:else if state === 'duplicate'}
-											Already saved
-										{:else}
-											Save
-										{/if}
-									</button>
-								</div>
-							</div>
-						</div>
-					{/each}
-				</div>
-			{/if}
-		{/if}
-
-		<!-- ── SAVED TAB ── -->
-		{#if activeTab === 'saved'}
-			<div class="flex gap-3 mb-6">
-				<input
-					type="search"
-					bind:value={savedSearch}
-					oninput={loadSaved}
-					placeholder="Search saved listings..."
-					class="form-input max-w-xs text-sm py-2"
-				/>
-			</div>
-
-			{#if savedListings.length === 0}
-				<div class="text-center py-20 text-gray-400">
-					<p class="text-lg font-medium">No saved listings</p>
-					<p class="text-sm mt-1">Save listings from the Search tab</p>
-				</div>
-			{:else}
-				<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-					{#each savedListings as listing}
-						<div class="bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100 flex flex-col">
-							<div class="relative h-44 bg-gray-100">
-								{#if listing.image}
-									<img src={listing.image} alt={listing.title} class="w-full h-full object-cover" loading="lazy" />
-								{:else}
-									<div class="w-full h-full flex items-center justify-center text-gray-300 text-xs">No image</div>
-								{/if}
-								<span class="absolute top-2 left-2 text-xs font-semibold px-2 py-1 rounded-full {listing.transaction_type === 'rent' ? 'bg-[#2d6a4f] text-white' : 'bg-[#0077b6] text-white'}">
-									{listing.transaction_type === 'rent' ? 'Rent' : 'Sale'}
-								</span>
-								<button onclick={() => remove(listing.id)} class="absolute top-2 right-2 w-6 h-6 bg-red-500 text-white rounded-full text-xs hover:bg-red-600 transition-colors flex items-center justify-center">✕</button>
-							</div>
-							<div class="p-4 flex flex-col flex-1">
-								<h3 class="font-semibold text-gray-900 text-sm leading-snug mb-1 line-clamp-2">{listing.title}</h3>
-								<p class="text-gray-500 text-xs mb-2">{listing.location}</p>
-								{#if listing.features?.length}
-									<div class="flex flex-wrap gap-1 mb-2">
-										{#each listing.features.slice(0, 3) as f}
-											<span class="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">{f}</span>
-										{/each}
-									</div>
-								{/if}
-								<p class="font-bold text-[#0077b6] mb-2">{listing.price}</p>
-								{#if listing.source && listing.source !== "lexpress"}
-									<span class="text-xs text-gray-400 mb-2 block">{SOURCES.find(s => s.id === listing.source)?.name ?? listing.source}</span>
-								{/if}
-								<select
-									class="form-input text-xs py-1.5 mb-2"
-									value={listing.scheme ?? ''}
-									onchange={(e) => updateScheme(listing.id, (e.target as HTMLSelectElement).value)}
-								>
-									<option value="">No scheme</option>
-									{#each ['PDS','IRS','RES','G+2','Smart City'] as s}
-										<option value={s}>{s}</option>
-									{/each}
-								</select>
-								<textarea
-									class="form-input text-xs resize-none mb-2 py-2"
-									rows="2"
-									placeholder="Notes..."
-									value={listing.notes}
-									oninput={(e) => updateNotes(listing.id, (e.target as HTMLTextAreaElement).value)}
-								></textarea>
-								<div class="flex gap-2">
-									<a href={listing.url} target="_blank" rel="noopener noreferrer" class="flex-1 text-center text-xs py-2 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors">View listing</a>
-								</div>
-								<p class="text-gray-400 text-xs mt-2">Saved {new Date(listing.saved_at).toLocaleDateString()}</p>
-							</div>
-						</div>
-					{/each}
-				</div>
-			{/if}
-		{/if}
-
-	</div>
 </div>
 
-<!-- Toast -->
 {#if toast}
-	<div class="fixed bottom-6 left-1/2 -translate-x-1/2 bg-[#2d6a4f] text-white px-6 py-3 rounded-xl shadow-lg text-sm font-medium z-50">
-		{toast}
-	</div>
+  <div class="fixed bottom-6 left-1/2 -translate-x-1/2 bg-[#2d6a4f] text-white px-6 py-3 rounded-xl shadow-lg text-sm font-medium z-50">{toast}</div>
 {/if}

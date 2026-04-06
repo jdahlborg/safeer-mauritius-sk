@@ -49,6 +49,7 @@ export async function initDb() {
 	await sql`ALTER TABLE listings ADD COLUMN IF NOT EXISTS scheme TEXT DEFAULT ''`;
 	await sql`ALTER TABLE listings ADD COLUMN IF NOT EXISTS lat FLOAT`;
 	await sql`ALTER TABLE listings ADD COLUMN IF NOT EXISTS lng FLOAT`;
+	await sql`ALTER TABLE listings ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'active'`;
 
 	// Rename year_built → available_from
 	await sql`
@@ -111,6 +112,22 @@ export async function initDb() {
 			listing_id INTEGER REFERENCES listings(id) ON DELETE CASCADE,
 			created_at TIMESTAMPTZ DEFAULT NOW(),
 			UNIQUE(user_id, listing_id)
+		)
+	`;
+
+	// ── Leads table ──────────────────────────────────────────────────────────────
+	await sql`
+		CREATE TABLE IF NOT EXISTS leads (
+			id         SERIAL PRIMARY KEY,
+			name       TEXT DEFAULT '',
+			email      TEXT NOT NULL,
+			phone      TEXT DEFAULT '',
+			message    TEXT DEFAULT '',
+			listing_id INTEGER REFERENCES listings(id) ON DELETE SET NULL,
+			partner_id INTEGER REFERENCES partners(id) ON DELETE SET NULL,
+			source     TEXT DEFAULT 'general',
+			read       BOOLEAN DEFAULT false,
+			created_at TIMESTAMPTZ DEFAULT NOW()
 		)
 	`;
 
@@ -268,6 +285,7 @@ export interface SavedListing {
 	lat: number | null;
 	lng: number | null;
 	saved_at: string;
+	status: string;
 }
 
 function parseRow(row: Record<string, unknown>): SavedListing {
@@ -279,6 +297,7 @@ function parseRow(row: Record<string, unknown>): SavedListing {
 		images: (() => {
 			try { return JSON.parse(row.images as string); } catch { return []; }
 		})(),
+		status: String(row.status ?? 'active'),
 	} as SavedListing;
 }
 
@@ -379,6 +398,16 @@ export async function updateListingAvailableFrom(id: number, available_from: str
 	const sql = getClient();
 	try {
 		const result = await sql`UPDATE listings SET available_from = ${available_from} WHERE id = ${id}`;
+		return result.count > 0;
+	} finally {
+		await sql.end();
+	}
+}
+
+export async function updateListingStatus(id: number, status: string): Promise<boolean> {
+	const sql = getClient();
+	try {
+		const result = await sql`UPDATE listings SET status = ${status} WHERE id = ${id}`;
 		return result.count > 0;
 	} finally {
 		await sql.end();
@@ -547,6 +576,97 @@ export async function deletePartner(id: number): Promise<boolean> {
 	try {
 		const result = await sql`DELETE FROM partners WHERE id = ${id}`;
 		return result.count > 0;
+	} finally {
+		await sql.end();
+	}
+}
+
+// ── Leads ─────────────────────────────────────────────────────────────────────
+
+export interface Lead {
+	id: number;
+	name: string;
+	email: string;
+	phone: string;
+	message: string;
+	listing_id: number | null;
+	partner_id: number | null;
+	source: string;
+	read: boolean;
+	created_at: string;
+}
+
+export async function saveLead(data: {
+	name?: string; email: string; phone?: string; message?: string;
+	listing_id?: number | null; partner_id?: number | null; source?: string;
+}): Promise<{ ok: boolean; id?: number; error?: string }> {
+	const sql = getClient();
+	try {
+		const rows = await sql`
+			INSERT INTO leads (name, email, phone, message, listing_id, partner_id, source)
+			VALUES (${data.name ?? ''}, ${data.email}, ${data.phone ?? ''}, ${data.message ?? ''},
+			        ${data.listing_id ?? null}, ${data.partner_id ?? null}, ${data.source ?? 'general'})
+			RETURNING id
+		`;
+		return { ok: true, id: rows[0].id as number };
+	} catch (e: unknown) {
+		return { ok: false, error: e instanceof Error ? e.message : String(e) };
+	} finally {
+		await sql.end();
+	}
+}
+
+export async function getLeads(options: { source?: string; read?: boolean } = {}): Promise<Lead[]> {
+	const sql = getClient();
+	try {
+		const rows = await sql`
+			SELECT l.*,
+				li.title as listing_title,
+				p.company as partner_company
+			FROM leads l
+			LEFT JOIN listings li ON li.id = l.listing_id
+			LEFT JOIN partners p ON p.id = l.partner_id
+			${options.source ? sql`WHERE l.source = ${options.source}` : sql``}
+			ORDER BY l.created_at DESC
+			LIMIT 200
+		`;
+		return rows as unknown as Lead[];
+	} finally {
+		await sql.end();
+	}
+}
+
+export async function markLeadRead(id: number): Promise<void> {
+	const sql = getClient();
+	try {
+		await sql`UPDATE leads SET read = true WHERE id = ${id}`;
+	} finally {
+		await sql.end();
+	}
+}
+
+export async function getAdminStats(): Promise<{
+	totalListings: number; activeListings: number; soldListings: number;
+	totalPartners: number; activePartners: number; pendingPartners: number;
+	totalLeads: number; unreadLeads: number;
+}> {
+	const sql = getClient();
+	try {
+		const [listings, partners, leads] = await Promise.all([
+			sql`SELECT COUNT(*) as total, COUNT(*) FILTER (WHERE status = 'active' OR status IS NULL OR status = '') as active, COUNT(*) FILTER (WHERE status IN ('sold','rented')) as sold FROM listings`,
+			sql`SELECT COUNT(*) as total, COUNT(*) FILTER (WHERE status = 'active') as active, COUNT(*) FILTER (WHERE status = 'pending') as pending FROM partners`,
+			sql`SELECT COUNT(*) as total, COUNT(*) FILTER (WHERE read = false) as unread FROM leads`,
+		]);
+		return {
+			totalListings: Number(listings[0].total),
+			activeListings: Number(listings[0].active),
+			soldListings: Number(listings[0].sold),
+			totalPartners: Number(partners[0].total),
+			activePartners: Number(partners[0].active),
+			pendingPartners: Number(partners[0].pending),
+			totalLeads: Number(leads[0].total),
+			unreadLeads: Number(leads[0].unread),
+		};
 	} finally {
 		await sql.end();
 	}
