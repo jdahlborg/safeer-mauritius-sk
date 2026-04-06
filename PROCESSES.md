@@ -1,111 +1,166 @@
-# Safeer Properties — Website Processes
+# Safeer Properties — Processes
 
-This document describes the current live flows in the app (visitor, partner, and admin).
+Operational reference for the current app behavior.
 
-## 1) Property discovery flow (visitor)
+## Scope
 
-1. Visitor lands on `/` and uses the search card (buy/rent, keyword, type, min bedrooms).
-2. The app redirects to `/properties` with query params (`transaction_type`, `q`, `type`, `minBeds`).
-3. On `/properties`, filters are applied client-side in real time:
-   - buy/rent/all toggle
+- Visitor flows: search, listing details, contact, favorites
+- Partner flows: applications and partner-site ingestion
+- Admin flows: scraping, curation, geocoding, exports
+
+## 1) Property Discovery (Visitor)
+
+**Entry point:** `/`  
+**Trigger:** user submits homepage search card  
+**Result:** redirected to `/properties` with URL params
+
+### Steps
+
+1. User selects buy/rent + optional keyword/type/min bedrooms.
+2. App opens `/properties` with query params:
+   - `transaction_type`
+   - `q`
+   - `type`
+   - `minBeds`
+3. Listings page applies client-side filtering in real time:
+   - transaction tab (all/buy/rent)
    - keyword
    - property type
    - min bedrooms
    - region (North/South/West/Center/East)
-   - scheme (when available on listings)
-4. Listing cards and the map are linked; hover/select states sync between card and marker.
-5. Clicking a card opens `/properties/[id]` for the full listing detail page.
+   - scheme (if present)
+4. Map and cards stay synchronized (hover/select state).
+5. User opens listing detail at `/properties/[id]`.
 
-## 2) Favorites flow (logged-in users)
+## 2) Favorites (Authenticated Users)
 
-1. User clicks heart icon on listing cards or on a listing detail page.
-2. If not signed in, user is redirected to `/login`.
-3. If signed in, UI updates optimistically and sends `POST /api/favorites` with `listingId`.
-4. API toggles favorite state in the `favorites` table and returns `{ ok, favorited }`.
-5. If request fails, UI rolls back to previous state.
+**Trigger:** heart icon click on cards/detail page  
+**API:** `POST /api/favorites`  
+**Data:** `{ listingId }`
 
-## 3) Contact / lead flow (homepage)
+### Steps
 
-1. Visitor fills the contact section on `/` and submits.
-2. Frontend posts to `POST /api/contact`.
-3. Current server behavior: request data is logged server-side and `{ ok: true }` is returned.
-4. WhatsApp CTA remains available for direct chat.
+1. If no user session, redirect to `/login`.
+2. If authenticated, UI performs optimistic toggle.
+3. Backend updates `favorites` join table.
+4. Response returns `{ ok, favorited }`.
+5. On error, UI reverts the optimistic state.
 
-Note: this endpoint currently does not send transactional email.
+## 3) Contact Lead Flow
 
-## 4) Partner application flow (`/partners`)
+**Trigger:** homepage contact form submit  
+**API:** `POST /api/contact`
 
-1. Agency/developer/agent fills partner form on `/partners`.
-2. Server action validates required fields (`name`, `company`, `email`) and terms acceptance.
-3. Application is persisted in PostgreSQL `partners` via `savePartner(...)`.
-4. Two Resend emails are sent:
-   - internal notification to `hello@safeer.mu`
-   - confirmation email to applicant
-5. UI returns success state; partner terms are available at `/partners/terms`.
+### Current behavior
 
-## 5) Admin authentication gate
+1. Frontend posts submitted data to API.
+2. Server logs payload and responds `{ ok: true }`.
+3. WhatsApp CTA remains available as alternate channel.
 
-1. Admin routes are behind `/admin` layout.
-2. Access is protected using `ADMIN_SECRET`.
-3. Main admin sections:
-   - `/admin` for listing scraping + saved listings ops
-   - `/admin/partners` for partner pipeline + partner-site AI scraping
+> Note: contact endpoint currently does not send email.
 
-## 6) Admin listing scraping (`/admin`)
+## 4) Partner Application (`/partners`)
 
-### A. Standard portal scraping
+**Trigger:** partner form submit  
+**Handler:** SvelteKit action in `/partners/+page.server.ts`  
+**Storage:** `partners` table
 
-1. Admin selects source (`lexpress`, `allysmu`, `2futures`), transaction type, property type, sorting, and pages.
-2. UI calls `GET /api/scrape`.
-3. Scraper returns normalized listing objects.
-4. Admin saves one-by-one or uses "Save All".
-5. Save calls `POST /api/listings`; duplicates by URL are flagged as "Already saved".
+### Steps
 
-### B. Data persistence details
+1. Validate required fields: `name`, `company`, `email`.
+2. Validate `agree_terms`.
+3. Persist partner application via `savePartner(...)`.
+4. Send internal Resend notification to `hello@safeer.mu`.
+5. Send confirmation email to applicant.
+6. Render success state in-page.
 
-- Listings are saved to table `listings` (legacy `saved_listings` is migrated/renamed).
-- On successful save, if coordinates are missing, background geocoding is triggered (fire-and-forget).
+Related page: `/partners/terms`
 
-## 7) Saved listings operations (`/admin` "Saved" tab)
+## 5) Admin Access Control
 
-- Search saved listings (`GET /api/listings?search=...`).
-- Update scheme via `PATCH /api/listings/[id]` with `scheme`.
-- Update internal notes via `PATCH /api/listings/[id]` with `notes`.
-- Update availability via `PATCH /api/listings/[id]` with `available_from`.
-- Delete listing via `DELETE /api/listings/[id]`.
-- Export all listings:
-  - JSON: `/api/export/json`
-  - CSV: `/api/export/csv`
+**Protected area:** `/admin` and `/admin/partners`  
+**Guard:** `ADMIN_SECRET`
 
-## 8) Geocoding process
+Admin sections:
+- `/admin`: scrape + saved listings operations
+- `/admin/partners`: partner pipeline + partner AI scraping
 
-1. Manual batch: admin clicks "Geocode All" -> `POST /api/geocode`.
-2. Server processes listings without `lat/lng` and geocodes by `location`.
-3. Rate limiting is respected (~1 request/sec).
-4. UI shows result counts (`updated` vs `total missing`).
+## 6) Standard Listing Scraping (`/admin`)
 
-## 9) Partner management + partner AI scraping (`/admin/partners`)
+**Trigger:** "Scrape Listings" button  
+**API:** `GET /api/scrape`
 
-### A. Partner pipeline management
+### Inputs
 
-- View all partner records and status (`pending`, `active`, `rejected`).
-- Update status/notes/website via `PATCH /api/partners/[id]`.
-- Delete partner via `DELETE /api/partners/[id]`.
-- Add partner manually via `POST /api/partners`.
+- `source`: `lexpress` | `allysmu` | `2futures`
+- `transaction_type`
+- `property_type`
+- `sort_by`
+- `pages` (capped in API)
 
-### B. Partner website AI scraping
+### Steps
 
-1. Admin sets a partner website URL in partner record.
-2. Admin starts scrape from panel -> `GET /api/scrape/partner?partner_id=...&pages=...`.
-3. Backend loads partner URL, then runs AI scraper (Claude Haiku + HTML cleaning/parsing).
-4. Results are shown in panel and can be saved individually or "Save All" to `/api/listings`.
-5. Saved partner listings use generated source IDs like `partner_company_name`.
+1. Backend scraper returns normalized listings.
+2. Admin saves one-by-one or via "Save All".
+3. Saving uses `POST /api/listings`.
+4. Duplicate URLs return "Already saved".
 
-## 10) Services pages
+## 7) Listing Persistence + Curation
 
-Static service pages exist at `/services/[slug]`:
+**Primary table:** `listings`  
 
-- `visa-residency`
+
+### Save behavior
+
+1. Insert listing record through `POST /api/listings`.
+2. If `location` exists and coords are missing, background geocode starts (fire-and-forget).
+
+### Saved tab operations (`/admin`)
+
+- Search: `GET /api/listings?search=...`
+- Update scheme: `PATCH /api/listings/[id]` with `scheme`
+- Update notes: `PATCH /api/listings/[id]` with `notes`
+- Update availability: `PATCH /api/listings/[id]` with `available_from`
+- Delete: `DELETE /api/listings/[id]`
+- Export JSON: `/api/export/json`
+- Export CSV: `/api/export/csv`
+
+## 8) Batch Geocoding
+
+**Trigger:** "Geocode All" in admin  
+**API:** `POST /api/geocode`
+
+### Steps
+
+1. Fetch listings missing `lat/lng`.
+2. Geocode by `location`.
+3. Respect provider rate limit (~1 req/sec).
+4. Return and display `{ updated, total }`.
+
+## 9) Partner Management (`/admin/partners`)
+
+### Pipeline operations
+
+- List partners with status (`pending`, `active`, `rejected`)
+- Update status/notes/website: `PATCH /api/partners/[id]`
+- Delete partner: `DELETE /api/partners/[id]`
+- Manual add: `POST /api/partners`
+
+### Partner AI scraping
+
+**Trigger:** "Start Scrape" in partner panel  
+**API:** `GET /api/scrape/partner?partner_id=...&pages=...`
+
+1. Admin sets/updates partner website URL.
+2. Backend resolves partner by `partner_id`.
+3. AI scraper processes pages and extracts structured listings.
+4. Results can be saved individually or via "Save All" to `/api/listings`.
+5. Source IDs are generated per partner (e.g. `partner_company_name`).
+
+## 10) Services Pages
+
+Static pages at `/services/[slug]`:
+
 - `legal-financial`
 - `logistics`
 - `family-lifestyle`
