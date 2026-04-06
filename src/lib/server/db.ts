@@ -45,6 +45,7 @@ export async function initDb() {
 
 	// Column migrations for existing installs
 	await sql`ALTER TABLE listings ADD COLUMN IF NOT EXISTS source TEXT DEFAULT 'lexpress'`;
+	await sql`ALTER TABLE listings ADD COLUMN IF NOT EXISTS partner_id INTEGER REFERENCES partners(id) ON DELETE SET NULL`;
 	await sql`ALTER TABLE listings ADD COLUMN IF NOT EXISTS images TEXT DEFAULT '[]'`;
 	await sql`ALTER TABLE listings ADD COLUMN IF NOT EXISTS scheme TEXT DEFAULT ''`;
 	await sql`ALTER TABLE listings ADD COLUMN IF NOT EXISTS lat FLOAT`;
@@ -286,6 +287,7 @@ export interface SavedListing {
 	lng: number | null;
 	saved_at: string;
 	status: string;
+	partner_id: number | null;
 }
 
 function parseRow(row: Record<string, unknown>): SavedListing {
@@ -298,6 +300,7 @@ function parseRow(row: Record<string, unknown>): SavedListing {
 			try { return JSON.parse(row.images as string); } catch { return []; }
 		})(),
 		status: String(row.status ?? 'active'),
+		partner_id: row.partner_id != null ? Number(row.partner_id) : null,
 	} as SavedListing;
 }
 
@@ -308,7 +311,7 @@ export async function saveListing(
 	try {
 		const rows = await sql`
 			INSERT INTO listings
-				(title, price, location, bedrooms, size, features, url, image, images, scheme, transaction_type, property_type, agency, source, notes, available_from, lat, lng)
+				(title, price, location, bedrooms, size, features, url, image, images, scheme, transaction_type, property_type, agency, source, notes, available_from, lat, lng, partner_id)
 			VALUES (
 				${String(data.title ?? '')},
 				${String(data.price ?? '')},
@@ -327,7 +330,8 @@ export async function saveListing(
 				${String(data.notes ?? '')},
 				${String(data.available_from ?? data.year_built ?? '')},
 				${data.lat != null ? Number(data.lat) : null},
-				${data.lng != null ? Number(data.lng) : null}
+				${data.lng != null ? Number(data.lng) : null},
+				${data.partner_id != null ? Number(data.partner_id) : null}
 			)
 			RETURNING id
 		`;
@@ -425,6 +429,16 @@ export async function updateListingFull(id: number, data: Partial<SavedListing>)
 				url              = COALESCE(${data.url ?? null}, url)
 			WHERE id = ${id}
 		`;
+		return result.count > 0;
+	} finally {
+		await sql.end();
+	}
+}
+
+export async function updateListingPartner(id: number, partnerId: number | null): Promise<boolean> {
+	const sql = getClient();
+	try {
+		const result = await sql`UPDATE listings SET partner_id = ${partnerId} WHERE id = ${id}`;
 		return result.count > 0;
 	} finally {
 		await sql.end();

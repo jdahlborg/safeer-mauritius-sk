@@ -1,5 +1,9 @@
 <script lang="ts">
-	import type { SavedListing } from '$lib/server/db';
+	import type { SavedListing, Partner } from '$lib/server/db';
+	import type { PageData } from './$types';
+
+	let { data }: { data: PageData } = $props();
+	const partners: Partner[] = data.partners ?? [];
 
 	type Listing = {
 		title: string; url: string; location: string; price: string;
@@ -416,7 +420,9 @@
 									</div>
 								{/if}
 								<p class="font-bold text-[#0077b6] mb-2">{listing.price}</p>
-								{#if listing.source && listing.source !== "lexpress"}
+								{#if listing.partner_id}
+									<span class="text-xs text-[#2d6a4f] mb-2 block">↳ {partners.find(p => p.id === listing.partner_id)?.company ?? 'Partner'}</span>
+								{:else if listing.source && listing.source !== 'lexpress'}
 									<span class="text-xs text-gray-400 mb-2 block">{SOURCES.find(s => s.id === listing.source)?.name ?? listing.source}</span>
 								{/if}
 								<select
@@ -528,6 +534,19 @@
 				<div>
 					<label class="form-label">Agency</label>
 					<input type="text" bind:value={editDraft.agency} class="form-input text-sm py-2" />
+				</div>
+				<div>
+					<label class="form-label">Partner</label>
+					<select
+						value={editDraft.partner_id ?? ''}
+						onchange={(e) => { const v = (e.target as HTMLSelectElement).value; editDraft.partner_id = v ? Number(v) : null; }}
+						class="form-input text-sm py-2"
+					>
+						<option value="">— none —</option>
+						{#each partners as p}
+							<option value={p.id}>{p.company}</option>
+						{/each}
+					</select>
 				</div>
 				<div>
 					<label class="form-label">Available From</label>
