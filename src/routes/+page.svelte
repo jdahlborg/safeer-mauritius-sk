@@ -202,7 +202,6 @@
 
 		<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
 			{#each [
-				{ href: '/services/visa-residency', icon: '🛂', color: '#0077b6', bg: 'bg-blue-50', title: 'Visa & Residency', desc: 'Premium Visa, Occupation Permit, Investor Permit, Retired Non-Citizen. We handle every document.' },
 				{ href: '/services/legal-financial', icon: '⚖️', color: '#2d6a4f', bg: 'bg-green-50', title: 'Legal & Financial', desc: 'Company formation, tax planning, bank accounts, and legal documentation — done right from day one.' },
 				{ href: '/services/logistics', icon: '📦', color: '#e76f51', bg: 'bg-orange-50', title: 'Logistics & Moving', desc: 'International removals, customs clearance, vehicle and pet import — fully coordinated.' },
 				{ href: '/services/family-lifestyle', icon: '👨‍👩‍👧', color: '#00b4d8', bg: 'bg-sky-50', title: 'Family & Lifestyle', desc: 'School search, healthcare, community integration, and expat introductions.' },

@@ -36,7 +36,7 @@
 					<li><a href="/#why-mauritius" class="footer-link">Why Mauritius</a></li>
 					<li><a href="/#faq" class="footer-link">FAQ</a></li>
 					<li><a href="/#contact" class="footer-link">Contact</a></li>
-					<li><a href="/partners" class="footer-link">For Partners</a></li>
+					<li><a href="/about" class="footer-link">About Us</a></li>
 				</ul>
 			</div>
 
@@ -44,7 +44,6 @@
 			<div>
 				<h4 class="font-semibold text-white mb-4">Services</h4>
 				<ul class="space-y-2">
-					<li><a href="/services/visa-residency" class="footer-link">Visa &amp; Residency</a></li>
 					<li><a href="/services/housing" class="footer-link">Housing &amp; Settling In</a></li>
 					<li><a href="/services/logistics" class="footer-link">Logistics &amp; Moving</a></li>
 					<li><a href="/services/legal-financial" class="footer-link">Legal &amp; Financial</a></li>

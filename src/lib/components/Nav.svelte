@@ -12,7 +12,7 @@
 		{ href: '/#services', label: ts('nav_services') },
 		{ href: '/#why-mauritius', label: ts('nav_why') },
 		{ href: '/#faq', label: ts('nav_faq') },
-		{ href: '/partners', label: ts('nav_partners') },
+		{ href: '/about', label: ts('nav_about') },
 	]);
 
 	const LANGS: { code: typeof locale.lang; label: string }[] = [
