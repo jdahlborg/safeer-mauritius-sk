@@ -5,159 +5,221 @@ Operational reference for the current app behavior.
 ## Scope
 
 - Visitor flows: search, listing details, contact, favorites
-- Partner flows: applications and partner-site ingestion
-- Admin flows: scraping, curation, geocoding, exports
+- User auth: magic link login, sessions, favorites
+- Partner flows: partner portal, listing management
+- Admin flows: dashboard, scraping, curation, geocoding, leads, partner management
+
+---
 
 ## 1) Property Discovery (Visitor)
 
-**Entry point:** `/`  
-**Trigger:** user submits homepage search card  
+**Entry point:** `/`
+**Trigger:** homepage search card submit
 **Result:** redirected to `/properties` with URL params
 
 ### Steps
 
 1. User selects buy/rent + optional keyword/type/min bedrooms.
-2. App opens `/properties` with query params:
-   - `transaction_type`
-   - `q`
-   - `type`
-   - `minBeds`
+2. App opens `/properties` with query params: `transaction_type`, `q`, `type`, `minBeds`.
 3. Listings page applies client-side filtering in real time:
-   - transaction tab (all/buy/rent)
-   - keyword
-   - property type
-   - min bedrooms
-   - region (North/South/West/Center/East)
-   - scheme (if present)
-4. Map and cards stay synchronized (hover/select state).
+   - Transaction type tab (all/buy/rent)
+   - Keyword search
+   - Property type
+   - Min bedrooms
+   - Region (North/South/West/Center/East)
+   - Scheme (PDS/IRS/RES/G+2/Smart City)
+4. Map with marker clustering and cards stay synchronized.
 5. User opens listing detail at `/properties/[id]`.
 
-## 2) Favorites (Authenticated Users)
+---
 
-**Trigger:** heart icon click on cards/detail page  
-**API:** `POST /api/favorites`  
+## 2) User Authentication (Magic Link)
+
+**Entry:** `/login`
+**Flow:** email → magic link email → `/auth/verify?token=...` → session cookie
+
+### Steps
+
+1. User enters email at `/login`.
+2. Server calls `createMagicLink(email)` → stores token (15 min TTL, single-use).
+3. Resend sends email from `onboarding@resend.dev` with sign-in button.
+4. User clicks link → `GET /auth/verify?token=...`.
+5. Token verified → user created or retrieved via `getOrCreateUser(email)`.
+6. Session created (`sessions` table, 30-day TTL), `session` cookie set (httpOnly).
+7. Redirect:
+   - Active partner → `/partner`
+   - Regular user → `/my/favorites`
+8. Sign out: `POST /logout` → deletes session, clears cookie.
+
+---
+
+## 3) Favorites (Authenticated Users)
+
+**Trigger:** heart icon click on listing cards or detail page
+**API:** `POST /api/favorites`
 **Data:** `{ listingId }`
 
 ### Steps
 
-1. If no user session, redirect to `/login`.
-2. If authenticated, UI performs optimistic toggle.
-3. Backend updates `favorites` join table.
-4. Response returns `{ ok, favorited }`.
-5. On error, UI reverts the optimistic state.
+1. If no user session → redirect to `/login`.
+2. Authenticated user gets optimistic UI toggle.
+3. Backend updates `favorites` join table via `toggleFavorite(userId, listingId)`.
+4. Response: `{ ok, favorited }`.
+5. On error, UI reverts optimistic state.
+6. Saved listings viewable at `/my/favorites`.
 
-## 3) Contact Lead Flow
+---
 
-**Trigger:** homepage contact form submit  
+## 4) Contact / Lead Flow
+
+**Trigger:** homepage contact form submit
 **API:** `POST /api/contact`
-
-### Current behavior
-
-1. Frontend posts submitted data to API.
-2. Server logs payload and responds `{ ok: true }`.
-3. WhatsApp CTA remains available as alternate channel.
-
-> Note: contact endpoint currently does not send email.
-
-## 4) Partner Application (`/partners`)
-
-**Trigger:** partner form submit  
-**Handler:** SvelteKit action in `/partners/+page.server.ts`  
-**Storage:** `partners` table
 
 ### Steps
 
-1. Validate required fields: `name`, `company`, `email`.
-2. Validate `agree_terms`.
-3. Persist partner application via `savePartner(...)`.
-4. Send internal Resend notification to `hello@safeer.mu`.
-5. Send confirmation email to applicant.
-6. Render success state in-page.
+1. Frontend posts `{ name, email, phone, message, source, listing_id?, partner_id? }`.
+2. Server calls `saveLead(...)` → persists to `leads` table.
+3. Admin sees new leads at `/admin/leads`.
+4. WhatsApp FAB remains available as alternate channel.
 
-Related page: `/partners/terms`
+---
 
 ## 5) Admin Access Control
 
-**Protected area:** `/admin` and `/admin/partners`  
-**Guard:** `ADMIN_SECRET`
+**Protected area:** `/admin/*`
+**Guard:** `ADMIN_SECRET` env var, stored as `admin_session` cookie (8-hour TTL)
+**Login:** `/admin/login`
 
-Admin sections:
-- `/admin`: scrape + saved listings operations
-- `/admin/partners`: partner pipeline + partner AI scraping
+When authenticated as admin, the nav shows an "Admin" link (gear icon).
 
-## 6) Standard Listing Scraping (`/admin`)
+### Admin sections
 
-**Trigger:** "Scrape Listings" button  
+| Route | Purpose |
+|---|---|
+| `/admin` | Dashboard: stats, quick actions, recent leads |
+| `/admin/listings` | Scrape portals + manage all saved listings |
+| `/admin/partners` | Manage all partners (add, activate, reject) |
+| `/admin/leads` | View and manage all contact leads |
+
+---
+
+## 6) Admin Dashboard (`/admin`)
+
+**Loader:** `getAdminStats()` + `getLeads()` (last 10)
+
+Shows:
+- Stat cards: total listings, active, sold/rented, active partners, pending partners, unread leads
+- Quick-action links to Listings, Partners, Leads sections
+- Recent leads table with mark-as-read
+
+---
+
+## 7) Standard Listing Scraping (`/admin/listings`)
+
+**Trigger:** "Scrape Listings" button
 **API:** `GET /api/scrape`
+
+### Sources
+
+- `lexpress` — L'Express Property (buy/rent/holiday, sortable)
+- `allysmu` — Ally's Real Estate (buy/rent)
+- `2futures` — 2Futures (buy only)
 
 ### Inputs
 
-- `source`: `lexpress` | `allysmu` | `2futures`
-- `transaction_type`
-- `property_type`
-- `sort_by`
-- `pages` (capped in API)
+- `source`, `transaction_type`, `property_type`, `sort_by`, `pages`
 
 ### Steps
 
 1. Backend scraper returns normalized listings.
-2. Admin saves one-by-one or via "Save All".
-3. Saving uses `POST /api/listings`.
-4. Duplicate URLs return "Already saved".
+2. Admin saves individually or via "Save All" → `POST /api/listings`.
+3. Duplicate URLs return "Already saved".
 
-## 7) Listing Persistence + Curation
+---
 
-**Primary table:** `listings`  
+## 8) Listing Curation (`/admin/listings` — Saved tab)
 
+**Table:** `listings`
 
-### Save behavior
-
-1. Insert listing record through `POST /api/listings`.
-2. If `location` exists and coords are missing, background geocode starts (fire-and-forget).
-
-### Saved tab operations (`/admin`)
+### Operations
 
 - Search: `GET /api/listings?search=...`
-- Update scheme: `PATCH /api/listings/[id]` with `scheme`
-- Update notes: `PATCH /api/listings/[id]` with `notes`
-- Update availability: `PATCH /api/listings/[id]` with `available_from`
+- Full edit (all fields): opens modal → `PATCH /api/listings/[id]`
+- Status toggle: Active / Sold / Rented → `PATCH /api/listings/[id]` with `status`
+- Assign to partner: partner dropdown in edit modal → `partner_id`
 - Delete: `DELETE /api/listings/[id]`
-- Export JSON: `/api/export/json`
-- Export CSV: `/api/export/csv`
+- Export JSON/CSV: `/api/export/json`, `/api/export/csv`
+- Geocode all: `POST /api/geocode`
 
-## 8) Batch Geocoding
+### Listing fields
 
-**Trigger:** "Geocode All" in admin  
+`title`, `price`, `location`, `bedrooms`, `size`, `transaction_type`, `property_type`, `status` (active/sold/rented), `scheme`, `agency`, `partner_id`, `available_from`, `image`, `url`, `notes`, `lat`, `lng`
+
+---
+
+## 9) Batch Geocoding
+
+**Trigger:** "Geocode All" button
 **API:** `POST /api/geocode`
 
-### Steps
-
 1. Fetch listings missing `lat/lng`.
-2. Geocode by `location`.
+2. Geocode each by `location` string.
 3. Respect provider rate limit (~1 req/sec).
-4. Return and display `{ updated, total }`.
+4. Return `{ updated, total }`.
 
-## 9) Partner Management (`/admin/partners`)
+---
 
-### Pipeline operations
+## 10) Partner Management (`/admin/partners`)
 
-- List partners with status (`pending`, `active`, `rejected`)
+### Pipeline
+
+- List all partners with status (`pending` / `active` / `rejected`)
+- Add manually or receive via inbound form (deprecated — no public partner page)
 - Update status/notes/website: `PATCH /api/partners/[id]`
-- Delete partner: `DELETE /api/partners/[id]`
-- Manual add: `POST /api/partners`
+- Delete: `DELETE /api/partners/[id]`
 
-### Partner AI scraping
+### AI scraping per partner
 
-**Trigger:** "Start Scrape" in partner panel  
+**Trigger:** "Start Scrape" button in partner row
 **API:** `GET /api/scrape/partner?partner_id=...&pages=...`
 
-1. Admin sets/updates partner website URL.
-2. Backend resolves partner by `partner_id`.
-3. AI scraper processes pages and extracts structured listings.
-4. Results can be saved individually or via "Save All" to `/api/listings`.
-5. Source IDs are generated per partner (e.g. `partner_company_name`).
+1. Admin sets partner website URL.
+2. AI scraper processes pages and extracts structured listings.
+3. Results saved individually or via "Save All" → `POST /api/listings` (auto-sets `partner_id`).
 
-## 10) Services Pages
+---
+
+## 11) Partner Portal (`/partner`)
+
+**Access:** active partners only (email must match a `status = 'active'` partner record)
+**Auth:** same magic link flow as regular users → redirected to `/partner` instead of `/my/favorites`
+
+### Operations
+
+- View own listings (filtered by `partner_id`)
+- Add new listing: form → `POST /api/listings` (auto-injects `partner_id`)
+- Edit listing: modal → `PATCH /api/listings/[id]`
+- Mark as sold/rented: status dropdown in edit modal
+- Delete listing: `DELETE /api/listings/[id]`
+- Refresh own listings: `GET /api/partner/listings`
+
+---
+
+## 12) Leads Management (`/admin/leads`)
+
+**Table:** `leads`
+**Fields:** `name`, `email`, `phone`, `message`, `source` (general/listing/partner), `listing_id?`, `partner_id?`, `read`, `created_at`
+
+### Operations
+
+- Filter by: All / Unread / General / Listing enquiries / Partner enquiries
+- Mark as read: `PATCH /api/leads/[id]` with `{ read: true }`
+- Mark all as read: parallel PATCH calls
+- Reply by email: mailto link pre-filled with subject
+
+---
+
+## 13) Services Pages
 
 Static pages at `/services/[slug]`:
 
