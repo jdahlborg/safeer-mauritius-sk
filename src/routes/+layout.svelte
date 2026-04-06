@@ -11,7 +11,7 @@
 	onMount(() => initLocale());
 </script>
 
-<Nav user={data.user} adminAuthed={data.adminAuthed} />
+<Nav user={data.user} adminAuthed={data.adminAuthed} partner={data.partner} />
 <main>
 	{@render children()}
 </main>

@@ -11,8 +11,12 @@ export const GET: RequestHandler = async ({ url }) => {
 	return json({ listings, count: listings.length });
 };
 
-export const POST: RequestHandler = async ({ request }) => {
+export const POST: RequestHandler = async ({ request, locals }) => {
 	const data = await request.json();
+	// Automatically assign partner_id when a partner posts a listing
+	if (locals.partner && data.partner_id == null) {
+		data.partner_id = locals.partner.id;
+	}
 	const result = await saveListing(data);
 	if (result.ok && result.id && data.location && data.lat == null) {
 		// Fire-and-forget geocode

@@ -612,6 +612,26 @@ export async function updatePartnerNotes(id: number, notes: string): Promise<boo
 	}
 }
 
+export async function getPartnerByEmail(email: string): Promise<Partner | null> {
+	const sql = getClient();
+	try {
+		const rows = await sql`SELECT * FROM partners WHERE email = ${email} AND status = 'active'`;
+		return rows.length ? rows[0] as unknown as Partner : null;
+	} finally {
+		await sql.end();
+	}
+}
+
+export async function getPartnerListings(partnerId: number): Promise<SavedListing[]> {
+	const sql = getClient();
+	try {
+		const rows = await sql`SELECT * FROM listings WHERE partner_id = ${partnerId} ORDER BY saved_at DESC`;
+		return rows.map(r => parseRow(r as Record<string, unknown>));
+	} finally {
+		await sql.end();
+	}
+}
+
 export async function deletePartner(id: number): Promise<boolean> {
 	const sql = getClient();
 	try {

@@ -1,5 +1,5 @@
 import { redirect } from '@sveltejs/kit';
-import { verifyMagicLink, getOrCreateUser, createSession } from '$lib/server/db';
+import { verifyMagicLink, getOrCreateUser, createSession, getPartnerByEmail } from '$lib/server/db';
 import type { RequestHandler } from './$types';
 
 export const GET: RequestHandler = async ({ url, cookies }) => {
@@ -21,5 +21,7 @@ export const GET: RequestHandler = async ({ url, cookies }) => {
 		maxAge: 60 * 60 * 24 * 30 // 30 days
 	});
 
-	redirect(302, '/my/favorites');
+	// Redirect partners to their portal
+	const partner = await getPartnerByEmail(email);
+	redirect(302, partner ? '/partner' : '/my/favorites');
 };
