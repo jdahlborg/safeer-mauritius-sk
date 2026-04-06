@@ -404,6 +404,33 @@ export async function updateListingAvailableFrom(id: number, available_from: str
 	}
 }
 
+export async function updateListingFull(id: number, data: Partial<SavedListing>): Promise<boolean> {
+	const sql = getClient();
+	try {
+		const result = await sql`
+			UPDATE listings SET
+				title            = COALESCE(${data.title ?? null}, title),
+				price            = COALESCE(${data.price ?? null}, price),
+				location         = COALESCE(${data.location ?? null}, location),
+				bedrooms         = COALESCE(${data.bedrooms ?? null}, bedrooms),
+				size             = COALESCE(${data.size ?? null}, size),
+				image            = COALESCE(${data.image ?? null}, image),
+				transaction_type = COALESCE(${data.transaction_type ?? null}, transaction_type),
+				property_type    = COALESCE(${data.property_type ?? null}, property_type),
+				agency           = COALESCE(${data.agency ?? null}, agency),
+				available_from   = COALESCE(${data.available_from ?? null}, available_from),
+				scheme           = COALESCE(${data.scheme ?? null}, scheme),
+				status           = COALESCE(${data.status ?? null}, status),
+				notes            = COALESCE(${data.notes ?? null}, notes),
+				url              = COALESCE(${data.url ?? null}, url)
+			WHERE id = ${id}
+		`;
+		return result.count > 0;
+	} finally {
+		await sql.end();
+	}
+}
+
 export async function updateListingStatus(id: number, status: string): Promise<boolean> {
 	const sql = getClient();
 	try {

@@ -138,6 +138,32 @@
 		showToast(`Marked as ${status}`);
 	}
 
+	// ── Edit modal ────────────────────────────────────────
+	let editListing = $state<SavedListing | null>(null);
+	let editDraft = $state<Partial<SavedListing>>({});
+	let saving = $state(false);
+
+	function openEdit(listing: SavedListing) {
+		editListing = listing;
+		editDraft = { ...listing };
+	}
+
+	function closeEdit() { editListing = null; editDraft = {}; }
+
+	async function saveEdit() {
+		if (!editListing) return;
+		saving = true;
+		await fetch(`/api/listings/${editListing.id}`, {
+			method: 'PATCH',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify(editDraft)
+		});
+		savedListings = savedListings.map(l => l.id === editListing!.id ? { ...l, ...editDraft } as SavedListing : l);
+		saving = false;
+		closeEdit();
+		showToast('Listing updated');
+	}
+
 	async function geocodeAll() {
 		showToast('Geocoding... this may take a few minutes');
 		const r = await fetch('/api/geocode', { method: 'POST' });
@@ -420,7 +446,8 @@
 									oninput={(e) => updateNotes(listing.id, (e.target as HTMLTextAreaElement).value)}
 								></textarea>
 								<div class="flex gap-2">
-									<a href={listing.url} target="_blank" rel="noopener noreferrer" class="flex-1 text-center text-xs py-2 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors">View listing</a>
+									<a href={listing.url} target="_blank" rel="noopener noreferrer" class="flex-1 text-center text-xs py-2 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors">View</a>
+									<button onclick={() => openEdit(listing)} class="flex-1 text-xs py-2 rounded-lg bg-[#0077b6]/10 text-[#0077b6] hover:bg-[#0077b6]/20 transition-colors font-medium">Edit</button>
 								</div>
 								<p class="text-gray-400 text-xs mt-2">Saved {new Date(listing.saved_at).toLocaleDateString()}</p>
 							</div>
@@ -432,6 +459,103 @@
 
 	</div>
 </div>
+
+<!-- Edit Modal -->
+{#if editListing}
+	<!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
+	<div class="fixed inset-0 z-50 flex items-center justify-center p-4" onclick={(e) => { if (e.target === e.currentTarget) closeEdit(); }}>
+		<div class="absolute inset-0 bg-black/40 backdrop-blur-sm"></div>
+		<div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+			<div class="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+				<h2 class="font-bold text-gray-900 text-lg">Edit Listing</h2>
+				<button onclick={closeEdit} class="w-8 h-8 rounded-full hover:bg-gray-100 flex items-center justify-center text-gray-400 hover:text-gray-600 transition-colors">✕</button>
+			</div>
+			<div class="p-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
+				<div class="sm:col-span-2">
+					<label class="form-label">Title</label>
+					<input type="text" bind:value={editDraft.title} class="form-input text-sm py-2" />
+				</div>
+				<div>
+					<label class="form-label">Price</label>
+					<input type="text" bind:value={editDraft.price} class="form-input text-sm py-2" placeholder="e.g. €250,000" />
+				</div>
+				<div>
+					<label class="form-label">Location</label>
+					<input type="text" bind:value={editDraft.location} class="form-input text-sm py-2" />
+				</div>
+				<div>
+					<label class="form-label">Bedrooms</label>
+					<input type="text" bind:value={editDraft.bedrooms} class="form-input text-sm py-2" placeholder="e.g. 3 Bedrooms" />
+				</div>
+				<div>
+					<label class="form-label">Size</label>
+					<input type="text" bind:value={editDraft.size} class="form-input text-sm py-2" placeholder="e.g. 120 m²" />
+				</div>
+				<div>
+					<label class="form-label">Transaction Type</label>
+					<select bind:value={editDraft.transaction_type} class="form-input text-sm py-2">
+						<option value="buy">For Sale</option>
+						<option value="rent">For Rent</option>
+						<option value="holiday">Holiday</option>
+					</select>
+				</div>
+				<div>
+					<label class="form-label">Property Type</label>
+					<select bind:value={editDraft.property_type} class="form-input text-sm py-2">
+						<option value="">— select —</option>
+						{#each ['apartment','villa','house','land','office','penthouse','other'] as t}
+							<option value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</option>
+						{/each}
+					</select>
+				</div>
+				<div>
+					<label class="form-label">Status</label>
+					<select bind:value={editDraft.status} class="form-input text-sm py-2">
+						<option value="active">Active</option>
+						<option value="sold">Sold</option>
+						<option value="rented">Rented</option>
+					</select>
+				</div>
+				<div>
+					<label class="form-label">Scheme</label>
+					<select bind:value={editDraft.scheme} class="form-input text-sm py-2">
+						<option value="">No scheme</option>
+						{#each ['PDS','IRS','RES','G+2','Smart City'] as s}
+							<option value={s}>{s}</option>
+						{/each}
+					</select>
+				</div>
+				<div>
+					<label class="form-label">Agency</label>
+					<input type="text" bind:value={editDraft.agency} class="form-input text-sm py-2" />
+				</div>
+				<div>
+					<label class="form-label">Available From</label>
+					<input type="text" bind:value={editDraft.available_from} class="form-input text-sm py-2" placeholder="e.g. Q3 2026" />
+				</div>
+				<div class="sm:col-span-2">
+					<label class="form-label">Image URL</label>
+					<input type="url" bind:value={editDraft.image} class="form-input text-sm py-2" />
+				</div>
+				<div class="sm:col-span-2">
+					<label class="form-label">Listing URL</label>
+					<input type="url" bind:value={editDraft.url} class="form-input text-sm py-2" />
+				</div>
+				<div class="sm:col-span-2">
+					<label class="form-label">Notes</label>
+					<textarea bind:value={editDraft.notes} rows="3" class="form-input text-sm resize-none"></textarea>
+				</div>
+			</div>
+			<div class="px-6 py-4 border-t border-gray-100 flex justify-end gap-3">
+				<button onclick={closeEdit} class="btn-outline text-sm px-5 py-2">Cancel</button>
+				<button onclick={saveEdit} disabled={saving} class="btn-primary text-sm px-5 py-2 disabled:opacity-60">
+					{saving ? "Saving…" : "Save changes"}
+				</button>
+			</div>
+		</div>
+	</div>
+{/if}
+
 
 <!-- Toast -->
 {#if toast}
