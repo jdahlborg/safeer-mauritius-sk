@@ -102,9 +102,11 @@ export async function initDb() {
 			token      TEXT PRIMARY KEY,
 			user_id    INTEGER REFERENCES users(id) ON DELETE CASCADE,
 			expires_at TIMESTAMPTZ NOT NULL,
-			created_at TIMESTAMPTZ DEFAULT NOW()
+			created_at TIMESTAMPTZ DEFAULT NOW(),
+			user_agent TEXT DEFAULT ''
 		)
 	`;
+	await sql`ALTER TABLE sessions ADD COLUMN IF NOT EXISTS user_agent TEXT DEFAULT ''`;
 	await sql`
 		CREATE TABLE IF NOT EXISTS magic_links (
 			token      TEXT PRIMARY KEY,
@@ -163,13 +165,15 @@ export async function getOrCreateUser(email: string, name = ''): Promise<User> {
 	}
 }
 
-export async function createSession(userId: number): Promise<string> {
+export async function createSession(userId: number, userAgent = ''): Promise<string> {
 	const sql = getClient();
 	const { randomBytes } = await import('node:crypto');
 	const token = randomBytes(32).toString('hex');
 	const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days
 	try {
-		await sql`INSERT INTO sessions (token, user_id, expires_at) VALUES (${token}, ${userId}, ${expiresAt})`;
+		// Prune expired sessions for this user before inserting
+		await sql`DELETE FROM sessions WHERE user_id = ${userId} AND expires_at < NOW()`;
+		await sql`INSERT INTO sessions (token, user_id, expires_at, user_agent) VALUES (${token}, ${userId}, ${expiresAt}, ${userAgent})`;
 		return token;
 	} finally {
 		await sql.end();

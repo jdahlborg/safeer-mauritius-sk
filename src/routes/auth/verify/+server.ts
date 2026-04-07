@@ -2,7 +2,7 @@ import { redirect } from '@sveltejs/kit';
 import { verifyMagicLink, getOrCreateUser, createSession, getPartnerByEmail } from '$lib/server/db';
 import type { RequestHandler } from './$types';
 
-export const GET: RequestHandler = async ({ url, cookies }) => {
+export const GET: RequestHandler = async ({ url, cookies, request }) => {
 	const token = url.searchParams.get('token') ?? '';
 
 	const email = await verifyMagicLink(token);
@@ -11,7 +11,8 @@ export const GET: RequestHandler = async ({ url, cookies }) => {
 	}
 
 	const user = await getOrCreateUser(email);
-	const sessionToken = await createSession(user.id);
+	const userAgent = request.headers.get('user-agent') ?? '';
+	const sessionToken = await createSession(user.id, userAgent);
 
 	cookies.set('session', sessionToken, {
 		path: '/',
