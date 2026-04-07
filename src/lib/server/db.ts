@@ -52,6 +52,13 @@ export async function initDb() {
 	await sql`ALTER TABLE listings ADD COLUMN IF NOT EXISTS lng FLOAT`;
 	await sql`ALTER TABLE listings ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'active'`;
 
+	// Backfill images: if images is '[]' but image is set, populate images from image
+	await sql`
+		UPDATE listings
+		SET images = json_build_array(image)::text
+		WHERE (images IS NULL OR images = '[]') AND image IS NOT NULL AND image <> ''
+	`;
+
 	// Rename year_built → available_from
 	await sql`
 		DO $$ BEGIN
@@ -321,7 +328,7 @@ export async function saveListing(
 				${JSON.stringify(data.features ?? [])},
 				${String(data.url ?? '')},
 				${String(data.image ?? '')},
-				${JSON.stringify(data.images ?? [])},
+				${JSON.stringify(data.images?.length ? data.images : (data.image ? [data.image] : []))},
 				${String(data.scheme ?? '')},
 				${String(data.transaction_type ?? data.payment ?? '')},
 				${String(data.property_type ?? '')},
@@ -410,6 +417,7 @@ export async function updateListingAvailableFrom(id: number, available_from: str
 
 export async function updateListingFull(id: number, data: Partial<SavedListing>): Promise<boolean> {
 	const sql = getClient();
+	const imagesJson = data.images != null ? JSON.stringify(data.images) : null;
 	try {
 		const result = await sql`
 			UPDATE listings SET
@@ -419,6 +427,7 @@ export async function updateListingFull(id: number, data: Partial<SavedListing>)
 				bedrooms         = COALESCE(${data.bedrooms ?? null}, bedrooms),
 				size             = COALESCE(${data.size ?? null}, size),
 				image            = COALESCE(${data.image ?? null}, image),
+				images           = COALESCE(${imagesJson}, images),
 				transaction_type = COALESCE(${data.transaction_type ?? null}, transaction_type),
 				property_type    = COALESCE(${data.property_type ?? null}, property_type),
 				agency           = COALESCE(${data.agency ?? null}, agency),

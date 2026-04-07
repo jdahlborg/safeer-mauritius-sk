@@ -22,10 +22,16 @@ function extractContent(html: string, baseUrl: string): string {
 	$('a[href]').each((_, el) => {
 		const href = $(el).attr('href') ?? '';
 		if (href.startsWith('/')) $(el).attr('href', origin + href);
+		else if (href && !href.startsWith('http') && !href.startsWith('#') && !href.startsWith('mailto:')) {
+			$(el).attr('href', origin + '/' + href);
+		}
 	});
 	$('img[src]').each((_, el) => {
 		const src = $(el).attr('src') ?? '';
 		if (src.startsWith('/')) $(el).attr('src', origin + src);
+		else if (src && !src.startsWith('http') && !src.startsWith('data:')) {
+			$(el).attr('src', origin + '/' + src);
+		}
 	});
 
 	// Return condensed HTML (keep links and images for URL/image extraction)
@@ -79,7 +85,7 @@ Return a JSON array (no markdown, no explanation) where each item has:
 
 Rules:
 - Only include actual property listings (not navigation links, banners, etc.)
-- All URLs must be absolute (prepend ${new URL(baseUrl).origin} to relative paths)
+- All URLs must be absolute. If you see href="/properties/foo" → "${new URL(baseUrl).origin}/properties/foo". If you see href="properties/foo" → "${new URL(baseUrl).origin}/properties/foo". If you see href="https://..." → keep as-is.
 - For images: collect every <img> src and srcset URL associated with a listing; include gallery images, thumbnails, and hero images
 - The "image" field should be the best/largest single image; "images" should contain all of them including "image"
 - If a field is unknown, use empty string or []
@@ -147,10 +153,11 @@ export async function scrapePartnerSite(
 		const content = extractContent(html, currentUrl);
 		const listings = await extractWithAI(content, currentUrl, agency);
 
-		// Deduplicate by URL
+		// Deduplicate by URL (fall back to title+location when URL missing)
 		for (const l of listings) {
-			if (l.url && !seen.has(l.url)) {
-				seen.add(l.url);
+			const key = l.url || `${l.title}|${l.location}`;
+			if (key && !seen.has(key)) {
+				seen.add(key);
 				allListings.push(l);
 			}
 		}
